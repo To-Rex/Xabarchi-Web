@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { ChevronDown, MessageCircleQuestion } from 'lucide-react'
 import { useT } from '@/shared/i18n'
@@ -105,9 +106,9 @@ export default function FaqPage() {
       </div>
       <Reveal className="mt-12 text-center">
         <p className="text-sm text-ink-2">{t.subtitle}</p>
-        <a href="mailto:salom@xabarchi.uz" className="mt-4 inline-block">
+        <Link to="/contact" className="mt-4 inline-block">
           <Button variant="secondary">{t.contact}</Button>
-        </a>
+        </Link>
       </Reveal>
     </div>
   )

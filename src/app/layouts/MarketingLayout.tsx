@@ -4,11 +4,12 @@ import { AnimatePresence, motion } from 'motion/react'
 import { Menu, X } from 'lucide-react'
 import { useT } from '@/shared/i18n'
 import { cn } from '@/shared/lib/cn'
+import { CONTACT } from '@/shared/config/contact'
 import { Button, LangSwitcher, Logo, ThemeToggle } from '@/shared/ui'
 
 const dict = {
   uz: {
-    nav: { product: 'Imkoniyatlar', pricing: 'Narxlar', docs: 'API hujjatlari', faq: 'Savollar' },
+    nav: { product: 'Imkoniyatlar', pricing: 'Narxlar', docs: 'API hujjatlari', faq: 'Savollar', contact: 'Aloqa' },
     login: 'Kirish',
     cta: "Bepul boshlash",
     footer: {
@@ -24,7 +25,7 @@ const dict = {
     },
   },
   ru: {
-    nav: { product: 'Возможности', pricing: 'Цены', docs: 'API документация', faq: 'Вопросы' },
+    nav: { product: 'Возможности', pricing: 'Цены', docs: 'API документация', faq: 'Вопросы', contact: 'Контакты' },
     login: 'Войти',
     cta: 'Начать бесплатно',
     footer: {
@@ -40,7 +41,7 @@ const dict = {
     },
   },
   en: {
-    nav: { product: 'Features', pricing: 'Pricing', docs: 'API docs', faq: 'FAQ' },
+    nav: { product: 'Features', pricing: 'Pricing', docs: 'API docs', faq: 'FAQ', contact: 'Contact' },
     login: 'Sign in',
     cta: 'Start for free',
     footer: {
@@ -80,6 +81,7 @@ export function MarketingLayout() {
     { to: '/pricing', label: t.nav.pricing },
     { to: '/docs', label: t.nav.docs },
     { to: '/faq', label: t.nav.faq },
+    { to: '/contact', label: t.nav.contact },
   ]
 
   return (
@@ -204,15 +206,15 @@ export function MarketingLayout() {
             <ul className="mt-3 space-y-2 text-sm">
               <li><Link to="/faq" className="text-ink-2 transition-colors hover:text-brand">{t.nav.faq}</Link></li>
               <li><Link to="/app/help" className="text-ink-2 transition-colors hover:text-brand">{t.footer.help}</Link></li>
-              <li><a href="mailto:salom@xabarchi.uz" className="text-ink-2 transition-colors hover:text-brand">{t.footer.contact}</a></li>
+              <li><Link to="/contact" className="text-ink-2 transition-colors hover:text-brand">{t.footer.contact}</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="text-[13px] font-semibold uppercase tracking-wider text-ink-3">{t.footer.contact}</h4>
             <ul className="mt-3 space-y-2 font-mono text-sm text-ink-2">
-              <li>+998 71 200 00 00</li>
-              <li>salom@xabarchi.uz</li>
-              <li>Toshkent, IT Park</li>
+              <li><a href={`tel:${CONTACT.phone}`} className="tnum transition-colors hover:text-brand">{CONTACT.phoneDisplay}</a></li>
+              <li><a href={`mailto:${CONTACT.email}`} className="break-all transition-colors hover:text-brand">{CONTACT.email}</a></li>
+              <li>{CONTACT.address}</li>
             </ul>
           </div>
         </div>

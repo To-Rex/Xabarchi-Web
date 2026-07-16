@@ -10,6 +10,7 @@ const HomePage = lazy(() => import('@/pages/marketing/HomePage'))
 const PricingPage = lazy(() => import('@/pages/marketing/PricingPage'))
 const FaqPage = lazy(() => import('@/pages/marketing/FaqPage'))
 const DocsPage = lazy(() => import('@/pages/marketing/DocsPage'))
+const ContactPage = lazy(() => import('@/pages/marketing/ContactPage'))
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
 const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage'))
@@ -57,6 +58,7 @@ export const router = createBrowserRouter([
       { path: '/pricing', element: <Boundary><PricingPage /></Boundary> },
       { path: '/faq', element: <Boundary><FaqPage /></Boundary> },
       { path: '/docs', element: <Boundary><DocsPage /></Boundary> },
+      { path: '/contact', element: <Boundary><ContactPage /></Boundary> },
     ],
   },
   {

@@ -6,6 +6,7 @@ import { useT } from '@/shared/i18n'
 import { commonDict } from '@/shared/i18n/common'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
 import { cn } from '@/shared/lib/cn'
+import { CONTACT } from '@/shared/config/contact'
 import { Button, Card, CardBody, EmptyState, Input, PageHeader } from '@/shared/ui'
 
 const dict = {
@@ -186,13 +187,13 @@ export default function HelpPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2.5">
-            <a href="mailto:salom@xabarchi.uz">
+            <a href={`mailto:${CONTACT.email}`}>
               <Button variant="secondary" size="sm">
                 <Mail className="size-4" />
                 {t.contact.email}
               </Button>
             </a>
-            <Button size="sm" onClick={() => window.open('https://t.me/xabarchi_uz', '_blank')}>
+            <Button size="sm" onClick={() => window.open(CONTACT.telegram, '_blank')}>
               <Send className="size-4" />
               {t.contact.telegram}
             </Button>

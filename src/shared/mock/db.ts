@@ -170,7 +170,7 @@ export const templates: Template[] = [
   {
     id: 'tpl_04',
     name: "To'lov eslatmasi",
-    text: "Hurmatli mijoz, {summa} so'm to'lovingiz {sana} gacha kutilmoqda. Savollar: +998 71 200 00 00",
+    text: "Hurmatli mijoz, {summa} so'm to'lovingiz {sana} gacha kutilmoqda. Savollar: +998 99 534 03 13",
     variables: ['summa', 'sana'],
     usedCount: 412,
     updatedAt: agoIso(20 * DAY),
