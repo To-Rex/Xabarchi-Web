@@ -1,0 +1,176 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+ * Xabarchi design tokens
+ * Palette drawn from Uzbek craft: kok (Samarkand tile turquoise) on cool
+ * paper white; ink is a deep blue-green; gold thread reserved for warnings.
+ * ------------------------------------------------------------------------- */
+:root {
+  --x-bg: #f6f8f8;
+  --x-surface: #ffffff;
+  --x-raised: #ffffff;
+  --x-sunken: #eef2f2;
+  --x-ink: #10222b;
+  --x-ink-2: #48606b;
+  --x-ink-3: #7d939c;
+  --x-line: #e2e9e9;
+  --x-line-2: #c8d5d6;
+  --x-brand: #0e9488;
+  --x-brand-2: #0a6e66;
+  --x-brand-ink: #ffffff;
+  --x-brand-soft: #dff1ee;
+  --x-brand-glow: rgba(14, 148, 136, 0.22);
+  --x-gold: #b97d1e;
+  --x-gold-soft: #f8ecd7;
+  --x-danger: #c94236;
+  --x-danger-soft: #fbe9e6;
+  --x-ok: #22854c;
+  --x-ok-soft: #e2f3e8;
+  --x-info: #2e6fb7;
+  --x-info-soft: #e5eef8;
+  --x-shadow: 210 30% 20%;
+}
+
+.dark {
+  --x-bg: #0a1418;
+  --x-surface: #101e24;
+  --x-raised: #16262d;
+  --x-sunken: #071014;
+  --x-ink: #e6eeec;
+  --x-ink-2: #9cb2b1;
+  --x-ink-3: #63797f;
+  --x-line: #1d3138;
+  --x-line-2: #2c454e;
+  --x-brand: #2cc5b6;
+  --x-brand-2: #56d6c9;
+  --x-brand-ink: #06211e;
+  --x-brand-soft: #10322f;
+  --x-brand-glow: rgba(44, 197, 182, 0.16);
+  --x-gold: #e0a94e;
+  --x-gold-soft: #33270f;
+  --x-danger: #e6685c;
+  --x-danger-soft: #3a1512;
+  --x-ok: #4cba79;
+  --x-ok-soft: #0f2e1c;
+  --x-info: #6ea8e8;
+  --x-info-soft: #142639;
+  --x-shadow: 200 60% 2%;
+}
+
+@theme inline {
+  --color-bg: var(--x-bg);
+  --color-surface: var(--x-surface);
+  --color-raised: var(--x-raised);
+  --color-sunken: var(--x-sunken);
+  --color-ink: var(--x-ink);
+  --color-ink-2: var(--x-ink-2);
+  --color-ink-3: var(--x-ink-3);
+  --color-line: var(--x-line);
+  --color-line-2: var(--x-line-2);
+  --color-brand: var(--x-brand);
+  --color-brand-2: var(--x-brand-2);
+  --color-brand-ink: var(--x-brand-ink);
+  --color-brand-soft: var(--x-brand-soft);
+  --color-gold: var(--x-gold);
+  --color-gold-soft: var(--x-gold-soft);
+  --color-danger: var(--x-danger);
+  --color-danger-soft: var(--x-danger-soft);
+  --color-ok: var(--x-ok);
+  --color-ok-soft: var(--x-ok-soft);
+  --color-info: var(--x-info);
+  --color-info-soft: var(--x-info-soft);
+
+  --font-display: 'Unbounded', 'Golos Text', system-ui, sans-serif;
+  --font-sans: 'Golos Text', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+
+  --shadow-card: 0 1px 2px hsl(var(--x-shadow) / 0.05), 0 4px 16px -4px hsl(var(--x-shadow) / 0.07);
+  --shadow-pop: 0 2px 6px hsl(var(--x-shadow) / 0.08), 0 12px 32px -8px hsl(var(--x-shadow) / 0.18);
+  --shadow-glow: 0 0 0 1px var(--x-brand-glow), 0 8px 32px -4px var(--x-brand-glow);
+
+  --animate-fade-up: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade-in: fade-in 0.4s ease both;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-pulse-soft: pulse-soft 2.2s ease-in-out infinite;
+  --animate-dash-travel: dash-travel 1.2s linear infinite;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+@keyframes dash-travel {
+  to { stroke-dashoffset: -14; }
+}
+
+/* Base ------------------------------------------------------------------- */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-bg text-ink font-sans antialiased;
+  font-feature-settings: 'ss01', 'cv05';
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--x-brand);
+  color: var(--x-brand-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--x-brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Subtle themed scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--x-line-2) transparent;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background: var(--x-line-2);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-track { background: transparent; }
+
+/* Theme switch: colors snap via the View Transition; everything else stays put */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 2147483646; }
+
+/* Number tabularity for stats and tables */
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* Reduced motion: collapse all animation to instant */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

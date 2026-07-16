@@ -1,0 +1,94 @@
+import { lazy, Suspense, type ReactNode } from 'react'
+import { createBrowserRouter, Navigate, useLocation } from 'react-router-dom'
+import { DispatchPath } from '@/shared/ui'
+import { useIsAuthenticated } from '@/features/auth/model/authStore'
+import { MarketingLayout } from './layouts/MarketingLayout'
+import { AuthLayout } from './layouts/AuthLayout'
+import { DashboardLayout } from './layouts/DashboardLayout'
+
+const HomePage = lazy(() => import('@/pages/marketing/HomePage'))
+const PricingPage = lazy(() => import('@/pages/marketing/PricingPage'))
+const FaqPage = lazy(() => import('@/pages/marketing/FaqPage'))
+const DocsPage = lazy(() => import('@/pages/marketing/DocsPage'))
+
+const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
+const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage'))
+const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPasswordPage'))
+
+const OverviewPage = lazy(() => import('@/pages/dashboard/OverviewPage'))
+const SmsPage = lazy(() => import('@/pages/dashboard/SmsPage'))
+const ComposePage = lazy(() => import('@/pages/dashboard/ComposePage'))
+const DevicesPage = lazy(() => import('@/pages/dashboard/DevicesPage'))
+const ContactsPage = lazy(() => import('@/pages/dashboard/ContactsPage'))
+const TemplatesPage = lazy(() => import('@/pages/dashboard/TemplatesPage'))
+const AnalyticsPage = lazy(() => import('@/pages/dashboard/AnalyticsPage'))
+const ApiPage = lazy(() => import('@/pages/dashboard/ApiPage'))
+const BillingPage = lazy(() => import('@/pages/dashboard/BillingPage'))
+const SettingsPage = lazy(() => import('@/pages/dashboard/SettingsPage'))
+const ProfilePage = lazy(() => import('@/pages/dashboard/ProfilePage'))
+const NotificationsPage = lazy(() => import('@/pages/dashboard/NotificationsPage'))
+const HelpPage = lazy(() => import('@/pages/dashboard/HelpPage'))
+const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'))
+
+function FullScreenLoader() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <DispatchPath className="w-52 opacity-80" />
+    </div>
+  )
+}
+
+function Boundary({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<FullScreenLoader />}>{children}</Suspense>
+}
+
+function RequireAuth({ children }: { children: ReactNode }) {
+  const authed = useIsAuthenticated()
+  const location = useLocation()
+  if (!authed) return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  return <>{children}</>
+}
+
+export const router = createBrowserRouter([
+  {
+    element: <MarketingLayout />,
+    children: [
+      { path: '/', element: <Boundary><HomePage /></Boundary> },
+      { path: '/pricing', element: <Boundary><PricingPage /></Boundary> },
+      { path: '/faq', element: <Boundary><FaqPage /></Boundary> },
+      { path: '/docs', element: <Boundary><DocsPage /></Boundary> },
+    ],
+  },
+  {
+    element: <AuthLayout />,
+    children: [
+      { path: '/login', element: <Boundary><LoginPage /></Boundary> },
+      { path: '/register', element: <Boundary><RegisterPage /></Boundary> },
+      { path: '/forgot-password', element: <Boundary><ForgotPasswordPage /></Boundary> },
+    ],
+  },
+  {
+    path: '/app',
+    element: (
+      <RequireAuth>
+        <DashboardLayout />
+      </RequireAuth>
+    ),
+    children: [
+      { index: true, element: <Boundary><OverviewPage /></Boundary> },
+      { path: 'sms', element: <Boundary><SmsPage /></Boundary> },
+      { path: 'sms/new', element: <Boundary><ComposePage /></Boundary> },
+      { path: 'devices', element: <Boundary><DevicesPage /></Boundary> },
+      { path: 'contacts', element: <Boundary><ContactsPage /></Boundary> },
+      { path: 'templates', element: <Boundary><TemplatesPage /></Boundary> },
+      { path: 'analytics', element: <Boundary><AnalyticsPage /></Boundary> },
+      { path: 'api', element: <Boundary><ApiPage /></Boundary> },
+      { path: 'billing', element: <Boundary><BillingPage /></Boundary> },
+      { path: 'settings', element: <Boundary><SettingsPage /></Boundary> },
+      { path: 'profile', element: <Boundary><ProfilePage /></Boundary> },
+      { path: 'notifications', element: <Boundary><NotificationsPage /></Boundary> },
+      { path: 'help', element: <Boundary><HelpPage /></Boundary> },
+    ],
+  },
+  { path: '*', element: <Boundary><NotFoundPage /></Boundary> },
+])

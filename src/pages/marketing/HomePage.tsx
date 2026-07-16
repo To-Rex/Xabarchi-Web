@@ -1,0 +1,617 @@
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { AnimatePresence, motion } from 'motion/react'
+import {
+  ArrowRight,
+  BarChart3,
+  Braces,
+  FileText,
+  QrCode,
+  Send,
+  ShieldCheck,
+  Smartphone,
+  Users,
+} from 'lucide-react'
+import { useLang, useT } from '@/shared/i18n'
+import { formatCompact } from '@/shared/lib/format'
+import { usePageMeta } from '@/shared/lib/usePageMeta'
+import { cn } from '@/shared/lib/cn'
+import { AnimatedNumber, Button, CodeBlock, Reveal } from '@/shared/ui'
+
+const dict = {
+  uz: {
+    meta: { title: 'Xabarchi — SMS platformasi', desc: "O'z Android telefoningiz orqali SMS yuboring. Aggregatorlarsiz, o'z SIM-kartangiz bilan." },
+    hero: {
+      eyebrow: 'Biznes uchun SMS shlyuz',
+      title1: 'SMS yuboring.',
+      title2: "O'z telefoningizdan.",
+      body: "Xabarchi oddiy Android telefonni biznesingizning SMS shlyuziga aylantiradi. Aggregator shartnomalari, oldindan to'lovlar va murakkab hujjatlarsiz — o'z SIM-kartangiz, o'z tarifingiz.",
+      ctaPrimary: 'Bepul boshlash',
+      ctaSecondary: "API hujjatlari",
+      note: 'Kredit karta shart emas · 500 SMS/oy bepul',
+      phoneApp: 'Xabarchi Android',
+      dashboardChip: 'Boshqaruv paneli',
+    },
+    how: {
+      eyebrow: 'Qanday ishlaydi',
+      title: '3 daqiqada ishga tushiring',
+      steps: [
+        { title: 'Ilovani o‘rnating', body: "Android telefoningizga Xabarchi ilovasini yuklab oling. Eski telefon ham bo'laveradi — Android 8 va undan yuqori." },
+        { title: 'QR orqali ulang', body: 'Boshqaruv panelidagi QR kodni skanerlang — telefon hisobingizga xavfsiz bog‘lanadi va shlyuzga aylanadi.' },
+        { title: 'Yuborishni boshlang', body: 'Panel, shablonlar yoki API orqali xabar yuboring. Har bir SMS holati jonli kuzatiladi: navbatda → yuborildi → yetkazildi.' },
+      ],
+    },
+    features: {
+      eyebrow: 'Imkoniyatlar',
+      title: 'Katta platformalar darajasida.\nO‘z telefoningiz narxida.',
+      items: [
+        { title: 'Bir nechta qurilma', body: "Bir hisobga bir nechta telefon ulang. Yuklama avtomatik taqsimlanadi, biri o'chsa — navbat boshqasiga o'tadi." },
+        { title: 'Shablonlar', body: "OTP, buyurtma, eslatma — {ism} kabi o'zgaruvchilar bilan tayyor matnlar. Bir marta yozing, ming marta yuboring." },
+        { title: 'Kontaktlar va guruhlar', body: 'Mijozlar bazasini guruhlar bilan tartibda saqlang. Ommaviy yuborish — ikki bosishda.' },
+        { title: 'Jonli analitika', body: 'Yetkazish darajasi, qurilma yuklamasi, xarajatlar — hammasi bitta ekranda, real vaqtda.' },
+        { title: 'Dasturchilar uchun API', body: 'REST API va webhooklar. CRM yoki saytingizdan to‘g‘ridan-to‘g‘ri SMS yuboring — 5 qator kod bilan.' },
+        { title: 'Xavfsizlik', body: 'Xabarlar shifrlangan kanal orqali o‘tadi. Kalitlar faqat sizda — biz matnlarni saqlamaymiz.' },
+      ],
+    },
+    stats: {
+      title: 'Raqamlar o‘zi gapiradi',
+      items: [
+        { value: 2_400_000, label: 'yuborilgan SMS', compact: true },
+        { value: 1200, label: 'faol biznes', compact: false },
+        { value: 99.1, label: 'yetkazish darajasi, %', compact: false },
+        { value: 3400, label: 'ulangan qurilma', compact: false },
+      ],
+    },
+    api: {
+      eyebrow: 'Dasturchilarga',
+      title: 'Bitta so‘rov — SMS yo‘lda',
+      body: 'Toza REST API, aniq hujjatlar, webhooklar va rasmiy SDKlar. Sinov kalitini oling-da, 5 daqiqada birinchi xabaringizni yuboring.',
+      cta: 'Hujjatlarni ochish',
+    },
+    testimonials: {
+      eyebrow: 'Mijozlar fikri',
+      title: 'Bizga ishonishadi',
+      items: [
+        { text: 'Klinikamiz kuniga 300 ta eslatma yuboradi. Qabulga kelmaslik 40% ga kamaydi, SMS xarajati esa deyarli nolga tushdi.', name: 'Dilnoza Rahimova', role: 'MediPlus Klinika, administrator' },
+        { text: 'CRM tizimimizga API orqali uladik — yarim kunda. Endi har bir buyurtma statusi mijozga avtomatik boradi.', name: 'Otabek Nazarov', role: 'Havas Market, IT direktor' },
+        { text: 'Eski ikkita telefonni shlyuz qildik. Oyiga 2 mln so‘m tejaymiz va hech qanday shartnoma imzolamadik.', name: 'Sardor Berdiyev', role: 'Tez Dostavka, asoschi' },
+      ],
+    },
+    cta: {
+      title: 'Bugun birinchi SMSingizni yuboring',
+      body: "Ro'yxatdan o'tish 1 daqiqa. Oyiga 500 SMS — doim bepul.",
+      button: 'Hisob ochish',
+    },
+  },
+  ru: {
+    meta: { title: 'Xabarchi — SMS платформа', desc: 'Отправляйте SMS через собственный Android-телефон. Без агрегаторов, со своей SIM-картой.' },
+    hero: {
+      eyebrow: 'SMS-шлюз для бизнеса',
+      title1: 'Отправляйте SMS.',
+      title2: 'Со своего телефона.',
+      body: 'Xabarchi превращает обычный Android-телефон в SMS-шлюз вашего бизнеса. Без договоров с агрегаторами, предоплат и бумажной волокиты — ваша SIM-карта, ваш тариф.',
+      ctaPrimary: 'Начать бесплатно',
+      ctaSecondary: 'API документация',
+      note: 'Без кредитной карты · 500 SMS/мес бесплатно',
+      phoneApp: 'Xabarchi Android',
+      dashboardChip: 'Панель управления',
+    },
+    how: {
+      eyebrow: 'Как это работает',
+      title: 'Запуск за 3 минуты',
+      steps: [
+        { title: 'Установите приложение', body: 'Скачайте приложение Xabarchi на Android-телефон. Подойдёт и старый — Android 8 и выше.' },
+        { title: 'Подключите по QR', body: 'Отсканируйте QR-код из панели — телефон безопасно привяжется к аккаунту и станет шлюзом.' },
+        { title: 'Начните отправлять', body: 'Отправляйте из панели, по шаблонам или через API. Статус каждого SMS виден вживую: в очереди → отправлено → доставлено.' },
+      ],
+    },
+    features: {
+      eyebrow: 'Возможности',
+      title: 'Уровень больших платформ.\nПо цене вашего телефона.',
+      items: [
+        { title: 'Несколько устройств', body: 'Подключите несколько телефонов к одному аккаунту. Нагрузка распределяется автоматически, при сбое очередь переходит на другой.' },
+        { title: 'Шаблоны', body: 'OTP, заказы, напоминания — готовые тексты с переменными вроде {имя}. Напишите один раз, отправляйте тысячи.' },
+        { title: 'Контакты и группы', body: 'Держите базу клиентов в порядке с группами. Массовая рассылка — в два клика.' },
+        { title: 'Живая аналитика', body: 'Доставляемость, нагрузка устройств, расходы — всё на одном экране, в реальном времени.' },
+        { title: 'API для разработчиков', body: 'REST API и вебхуки. Отправляйте SMS прямо из CRM или сайта — 5 строк кода.' },
+        { title: 'Безопасность', body: 'Сообщения идут по шифрованному каналу. Ключи только у вас — мы не храним тексты.' },
+      ],
+    },
+    stats: {
+      title: 'Цифры говорят сами',
+      items: [
+        { value: 2_400_000, label: 'отправлено SMS', compact: true },
+        { value: 1200, label: 'активных бизнесов', compact: false },
+        { value: 99.1, label: 'доставляемость, %', compact: false },
+        { value: 3400, label: 'подключённых устройств', compact: false },
+      ],
+    },
+    api: {
+      eyebrow: 'Разработчикам',
+      title: 'Один запрос — SMS в пути',
+      body: 'Чистый REST API, понятная документация, вебхуки и официальные SDK. Возьмите тестовый ключ и отправьте первое сообщение за 5 минут.',
+      cta: 'Открыть документацию',
+    },
+    testimonials: {
+      eyebrow: 'Отзывы клиентов',
+      title: 'Нам доверяют',
+      items: [
+        { text: 'Наша клиника отправляет 300 напоминаний в день. Неявки снизились на 40%, а расходы на SMS упали почти до нуля.', name: 'Дильноза Рахимова', role: 'MediPlus Klinika, администратор' },
+        { text: 'Подключили к нашей CRM через API за полдня. Теперь статус каждого заказа уходит клиенту автоматически.', name: 'Отабек Назаров', role: 'Havas Market, IT-директор' },
+        { text: 'Сделали шлюз из двух старых телефонов. Экономим 2 млн сум в месяц и не подписали ни одного договора.', name: 'Сардор Бердиев', role: 'Tez Dostavka, основатель' },
+      ],
+    },
+    cta: {
+      title: 'Отправьте первое SMS сегодня',
+      body: 'Регистрация занимает 1 минуту. 500 SMS в месяц — бесплатно навсегда.',
+      button: 'Создать аккаунт',
+    },
+  },
+  en: {
+    meta: { title: 'Xabarchi — SMS platform', desc: 'Send SMS through your own Android phone. No aggregators — your SIM card, your rates.' },
+    hero: {
+      eyebrow: 'SMS gateway for business',
+      title1: 'Send SMS.',
+      title2: 'From your own phone.',
+      body: 'Xabarchi turns an ordinary Android phone into your business SMS gateway. No aggregator contracts, prepayments or paperwork — your SIM card, your rates.',
+      ctaPrimary: 'Start for free',
+      ctaSecondary: 'API docs',
+      note: 'No credit card required · 500 SMS/mo free',
+      phoneApp: 'Xabarchi Android',
+      dashboardChip: 'Dashboard',
+    },
+    how: {
+      eyebrow: 'How it works',
+      title: 'Live in 3 minutes',
+      steps: [
+        { title: 'Install the app', body: 'Download the Xabarchi app to an Android phone. An old one works fine — Android 8 and up.' },
+        { title: 'Pair with a QR', body: 'Scan the QR code from your dashboard — the phone securely links to your account and becomes a gateway.' },
+        { title: 'Start sending', body: 'Send from the dashboard, templates or the API. Watch every SMS live: queued → sent → delivered.' },
+      ],
+    },
+    features: {
+      eyebrow: 'Features',
+      title: 'Big-platform power.\nAt the price of your own phone.',
+      items: [
+        { title: 'Multiple devices', body: 'Connect several phones to one account. Load balances automatically; if one drops, the queue reroutes to another.' },
+        { title: 'Templates', body: 'OTP, orders, reminders — ready-made texts with variables like {name}. Write once, send thousands.' },
+        { title: 'Contacts & groups', body: 'Keep your customer base tidy with groups. Bulk sending takes two clicks.' },
+        { title: 'Live analytics', body: 'Delivery rate, device load, spending — all on one screen, in real time.' },
+        { title: 'Developer API', body: 'REST API and webhooks. Send SMS straight from your CRM or website — 5 lines of code.' },
+        { title: 'Security', body: 'Messages travel over an encrypted channel. Keys stay with you — we never store your texts.' },
+      ],
+    },
+    stats: {
+      title: 'The numbers speak',
+      items: [
+        { value: 2_400_000, label: 'SMS sent', compact: true },
+        { value: 1200, label: 'active businesses', compact: false },
+        { value: 99.1, label: 'delivery rate, %', compact: false },
+        { value: 3400, label: 'connected devices', compact: false },
+      ],
+    },
+    api: {
+      eyebrow: 'For developers',
+      title: 'One request — SMS on its way',
+      body: 'A clean REST API, clear docs, webhooks and official SDKs. Grab a test key and send your first message in 5 minutes.',
+      cta: 'Open the docs',
+    },
+    testimonials: {
+      eyebrow: 'Customer stories',
+      title: 'Trusted by teams',
+      items: [
+        { text: 'Our clinic sends 300 reminders a day. No-shows dropped 40%, and our SMS costs fell to almost nothing.', name: 'Dilnoza Rahimova', role: 'MediPlus Klinika, administrator' },
+        { text: 'We wired it into our CRM via the API in half a day. Every order status now reaches the customer automatically.', name: 'Otabek Nazarov', role: 'Havas Market, IT director' },
+        { text: 'We turned two old phones into a gateway. We save 2M UZS a month and never signed a single contract.', name: 'Sardor Berdiyev', role: 'Tez Dostavka, founder' },
+      ],
+    },
+    cta: {
+      title: 'Send your first SMS today',
+      body: 'Sign-up takes 1 minute. 500 SMS a month — free forever.',
+      button: 'Create account',
+    },
+  },
+}
+
+/* ------------------------------------------------------------------------ */
+/* Hero phone: live dispatch simulation — the page's signature moment        */
+/* ------------------------------------------------------------------------ */
+
+interface SimMessage {
+  id: number
+  to: string
+  text: string
+  stage: 0 | 1 | 2 // 0 queued, 1 sent, 2 delivered
+}
+
+const SIM_POOL: { to: string; text: string }[] = [
+  { to: '+998 90 123 45 67', text: 'Buyurtmangiz #4213 qabul qilindi ✅' },
+  { to: '+998 93 555 77 13', text: 'Tasdiqlash kodingiz: 48213' },
+  { to: '+998 91 782 24 40', text: 'Kuryer Sardor yo‘lga chiqdi 🛵' },
+  { to: '+998 97 214 90 05', text: 'Ertaga 15:00 da qabulga yozilgansiz' },
+  { to: '+998 88 402 11 76', text: 'Buyurtma #4225 yetkazib berildi' },
+]
+
+function StageTicks({ stage }: { stage: SimMessage['stage'] }) {
+  if (stage === 0) return <span className="size-1.5 animate-pulse-soft rounded-full bg-gold" />
+  return (
+    <svg viewBox="0 0 16 12" className="h-3 w-4 text-ok" fill="none" aria-hidden>
+      <path d="M1.5 6.5l2.5 2.5 5-5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      {stage === 2 && <path d="M8 9l1 1 5-5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
+    </svg>
+  )
+}
+
+// Module-level so a StrictMode remount never reuses an id (duplicate keys)
+let simMessageId = 0
+
+function HeroPhone({ appName, dashboardChip }: { appName: string; dashboardChip: string }) {
+  const [items, setItems] = useState<SimMessage[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    const timers: ReturnType<typeof setTimeout>[] = []
+    setItems([])
+
+    const spawn = () => {
+      if (cancelled) return
+      const seed = SIM_POOL[simMessageId % SIM_POOL.length]
+      const msgId = ++simMessageId
+      setItems((prev) => [...prev.slice(-2), { id: msgId, ...seed, stage: 0 }])
+      timers.push(
+        setTimeout(() => setItems((prev) => prev.map((m) => (m.id === msgId ? { ...m, stage: 1 } : m))), 1100),
+        setTimeout(() => setItems((prev) => prev.map((m) => (m.id === msgId ? { ...m, stage: 2 } : m))), 2300),
+        setTimeout(spawn, 3000),
+      )
+    }
+    spawn()
+
+    return () => {
+      cancelled = true
+      timers.forEach(clearTimeout)
+    }
+  }, [])
+
+  return (
+    <div className="relative mx-auto w-full max-w-md">
+      {/* dashboard chip feeding the phone */}
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5, duration: 0.5 }}
+        className="absolute -left-2 top-6 z-10 hidden items-center gap-2 rounded-xl border border-line bg-raised px-3 py-2 shadow-card sm:flex"
+      >
+        <span className="size-2 rounded-full bg-brand" />
+        <span className="text-xs font-medium text-ink-2">{dashboardChip}</span>
+      </motion.div>
+
+      {/* dashed feed line into the phone */}
+      <svg className="absolute left-10 top-14 hidden h-24 w-24 text-brand sm:block" viewBox="0 0 96 96" fill="none" aria-hidden>
+        <path
+          d="M6 6 C 6 60, 40 78, 88 82"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeDasharray="2 10"
+          className="animate-dash-travel"
+          opacity="0.6"
+        />
+      </svg>
+
+      {/* the phone */}
+      <motion.div
+        initial={{ opacity: 0, y: 28, rotate: -1.5 }}
+        animate={{ opacity: 1, y: 0, rotate: 0 }}
+        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+        className="relative ml-auto w-[290px] rounded-[2.4rem] border border-line-2 bg-surface p-3 shadow-pop sm:w-[320px]"
+      >
+        <div className="rounded-[1.9rem] bg-sunken p-4 dark:bg-bg">
+          {/* status bar */}
+          <div className="flex items-center justify-between px-1 text-[10px] font-medium text-ink-3">
+            <span className="tnum">09:41</span>
+            <span className="flex items-center gap-1">
+              <svg viewBox="0 0 14 10" className="h-2.5 w-3.5" fill="currentColor" aria-hidden>
+                <rect x="0" y="6" width="2.4" height="4" rx="0.6" />
+                <rect x="3.8" y="4" width="2.4" height="6" rx="0.6" />
+                <rect x="7.6" y="2" width="2.4" height="8" rx="0.6" />
+                <rect x="11.4" y="0" width="2.4" height="10" rx="0.6" opacity="0.35" />
+              </svg>
+              Ucell
+            </span>
+          </div>
+          {/* app header */}
+          <div className="mt-3 flex items-center gap-2.5 rounded-2xl bg-surface px-3.5 py-3 shadow-card">
+            <span className="flex size-8 items-center justify-center rounded-xl bg-brand">
+              <Send className="size-4 text-brand-ink" />
+            </span>
+            <div className="flex-1">
+              <p className="text-[13px] font-semibold leading-tight text-ink">{appName}</p>
+              <p className="flex items-center gap-1.5 text-[11px] text-ok">
+                <span className="size-1.5 rounded-full bg-ok" />
+                Gateway aktiv
+              </p>
+            </div>
+          </div>
+          {/* live message feed */}
+          <div className="mt-3 flex h-[248px] flex-col justify-end gap-2 overflow-hidden">
+            <AnimatePresence initial={false}>
+              {items.map((message) => (
+                <motion.div
+                  key={message.id}
+                  layout
+                  initial={{ opacity: 0, y: 22, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -14, scale: 0.97 }}
+                  transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                  className="rounded-2xl rounded-br-md bg-surface p-3 shadow-card"
+                >
+                  <p className="font-mono text-[11px] text-ink-3">{message.to}</p>
+                  <p className="mt-1 text-[12.5px] leading-snug text-ink">{message.text}</p>
+                  <div className="mt-1.5 flex items-center justify-end gap-1 text-[10px] text-ink-3">
+                    <span className="tnum">09:41</span>
+                    <StageTicks stage={message.stage} />
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ambient brand glow */}
+      <div aria-hidden className="absolute -inset-10 -z-10 rounded-full bg-brand/10 blur-3xl" />
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------------ */
+
+const featureIcons = [Smartphone, FileText, Users, BarChart3, Braces, ShieldCheck]
+
+export default function HomePage() {
+  const t = useT(dict)
+  const { lang } = useLang()
+  usePageMeta(t.meta.title, t.meta.desc)
+
+  return (
+    <div>
+      {/* HERO ------------------------------------------------------------- */}
+      <section className="relative overflow-hidden">
+        <div
+          aria-hidden
+          className="absolute inset-0 -z-10 opacity-60 dark:opacity-30"
+          style={{
+            backgroundImage:
+              'radial-gradient(60% 50% at 70% 10%, var(--x-brand-glow), transparent 70%)',
+          }}
+        />
+        <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 pb-20 pt-14 lg:grid-cols-[1.05fr_0.95fr] lg:pb-28 lg:pt-20">
+          <div>
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-1.5 text-[13px] font-medium text-brand-2 dark:text-brand"
+            >
+              <span className="size-1.5 rounded-full bg-brand" />
+              {t.hero.eyebrow}
+            </motion.p>
+            <motion.h1
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-6 font-display text-[clamp(2rem,5.4vw,3.4rem)] font-semibold leading-[1.08] tracking-tight text-ink"
+            >
+              {t.hero.title1}
+              <br />
+              <span className="text-brand">{t.hero.title2}</span>
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.16, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-6 max-w-xl text-pretty text-base leading-relaxed text-ink-2 sm:text-lg"
+            >
+              {t.hero.body}
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.24, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-8 flex flex-wrap items-center gap-3"
+            >
+              <Link to="/register">
+                <Button size="lg">
+                  {t.hero.ctaPrimary}
+                  <ArrowRight className="size-4" />
+                </Button>
+              </Link>
+              <Link to="/docs">
+                <Button size="lg" variant="secondary">
+                  <Braces className="size-4" />
+                  {t.hero.ctaSecondary}
+                </Button>
+              </Link>
+            </motion.div>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="mt-5 text-[13px] text-ink-3"
+            >
+              {t.hero.note}
+            </motion.p>
+          </div>
+
+          <HeroPhone appName={t.hero.phoneApp} dashboardChip={t.hero.dashboardChip} />
+        </div>
+      </section>
+
+      {/* HOW IT WORKS ----------------------------------------------------- */}
+      <section className="border-y border-line bg-surface" id="how">
+        <div className="mx-auto max-w-6xl px-5 py-20">
+          <Reveal>
+            <p className="text-[13px] font-semibold uppercase tracking-wider text-brand">{t.how.eyebrow}</p>
+            <h2 className="mt-3 font-display text-2xl font-semibold tracking-tight text-ink sm:text-3xl">{t.how.title}</h2>
+          </Reveal>
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            {t.how.steps.map((step, index) => {
+              const icons = [Smartphone, QrCode, Send]
+              const Icon = icons[index]
+              return (
+                <Reveal key={step.title} delay={index * 0.12}>
+                  <div className="group relative h-full rounded-2xl border border-line bg-bg p-6 transition-all duration-300 hover:border-brand/40 hover:shadow-glow">
+                    <div className="flex items-center justify-between">
+                      <span className="flex size-11 items-center justify-center rounded-xl bg-brand-soft text-brand transition-transform duration-300 group-hover:scale-110">
+                        <Icon className="size-5" />
+                      </span>
+                      <span className="font-display text-sm font-semibold text-ink-3">{index + 1}/3</span>
+                    </div>
+                    <h3 className="mt-5 text-base font-semibold text-ink">{step.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-ink-2">{step.body}</p>
+                  </div>
+                </Reveal>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* FEATURES --------------------------------------------------------- */}
+      <section className="mx-auto max-w-6xl px-5 py-20" id="features">
+        <Reveal>
+          <p className="text-[13px] font-semibold uppercase tracking-wider text-brand">{t.features.eyebrow}</p>
+          <h2 className="mt-3 whitespace-pre-line font-display text-2xl font-semibold leading-snug tracking-tight text-ink sm:text-3xl">
+            {t.features.title}
+          </h2>
+        </Reveal>
+        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {t.features.items.map((feature, index) => {
+            const Icon = featureIcons[index]
+            return (
+              <Reveal key={feature.title} delay={(index % 3) * 0.1}>
+                <div className="group h-full rounded-2xl border border-line bg-surface p-6 shadow-card transition-all duration-300 hover:-translate-y-1 hover:shadow-pop">
+                  <span className="inline-flex size-10 items-center justify-center rounded-xl bg-brand-soft text-brand">
+                    <Icon className="size-5" />
+                  </span>
+                  <h3 className="mt-4 text-[15px] font-semibold text-ink">{feature.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-ink-2">{feature.body}</p>
+                </div>
+              </Reveal>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* STATS ------------------------------------------------------------ */}
+      <section className="border-y border-line bg-ink text-white dark:bg-sunken">
+        <div className="mx-auto max-w-6xl px-5 py-16">
+          <Reveal>
+            <h2 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">{t.stats.title}</h2>
+          </Reveal>
+          <div className="mt-10 grid grid-cols-2 gap-8 lg:grid-cols-4">
+            {t.stats.items.map((stat, index) => (
+              <Reveal key={stat.label} delay={index * 0.08}>
+                <p className="tnum font-display text-3xl font-semibold text-brand sm:text-4xl">
+                  <AnimatedNumber
+                    value={stat.value}
+                    format={(v) =>
+                      stat.compact
+                        ? formatCompact(Math.round(v), lang)
+                        : stat.value % 1 !== 0
+                          ? v.toFixed(1)
+                          : new Intl.NumberFormat().format(Math.round(v))
+                    }
+                  />
+                  {stat.value % 1 === 0 && '+'}
+                </p>
+                <p className="mt-2 text-sm text-white/60">{stat.label}</p>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* API TEASER -------------------------------------------------------- */}
+      <section className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-20 lg:grid-cols-2">
+        <Reveal>
+          <p className="text-[13px] font-semibold uppercase tracking-wider text-brand">{t.api.eyebrow}</p>
+          <h2 className="mt-3 font-display text-2xl font-semibold tracking-tight text-ink sm:text-3xl">{t.api.title}</h2>
+          <p className="mt-4 max-w-lg text-base leading-relaxed text-ink-2">{t.api.body}</p>
+          <Link to="/docs" className="mt-7 inline-block">
+            <Button variant="secondary">
+              {t.api.cta}
+              <ArrowRight className="size-4" />
+            </Button>
+          </Link>
+        </Reveal>
+        <Reveal delay={0.15}>
+          <CodeBlock
+            title="POST /v1/messages"
+            code={`curl https://api.xabarchi.uz/v1/messages \\
+  -H "Authorization: Bearer xab_live_..." \\
+  -d to="+998901234567" \\
+  -d text="Tasdiqlash kodingiz: 48213"
+
+{
+  "id": "sms_0421",
+  "status": "queued",
+  "device": "dev_01",
+  "segments": 1
+}`}
+          />
+        </Reveal>
+      </section>
+
+      {/* TESTIMONIALS ------------------------------------------------------ */}
+      <section className="border-t border-line bg-surface">
+        <div className="mx-auto max-w-6xl px-5 py-20">
+          <Reveal>
+            <p className="text-[13px] font-semibold uppercase tracking-wider text-brand">{t.testimonials.eyebrow}</p>
+            <h2 className="mt-3 font-display text-2xl font-semibold tracking-tight text-ink sm:text-3xl">{t.testimonials.title}</h2>
+          </Reveal>
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+            {t.testimonials.items.map((item, index) => (
+              <Reveal key={item.name} delay={index * 0.1}>
+                <figure className="flex h-full flex-col justify-between rounded-2xl border border-line bg-bg p-6">
+                  <blockquote className="text-[15px] leading-relaxed text-ink">«{item.text}»</blockquote>
+                  <figcaption className="mt-6">
+                    <p className="text-sm font-semibold text-ink">{item.name}</p>
+                    <p className="mt-0.5 text-[13px] text-ink-3">{item.role}</p>
+                  </figcaption>
+                </figure>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FINAL CTA ---------------------------------------------------------- */}
+      <section className="mx-auto max-w-6xl px-5 py-24">
+        <Reveal>
+          <div className={cn('relative overflow-hidden rounded-3xl bg-brand px-6 py-16 text-center sm:px-16')}>
+            <div
+              aria-hidden
+              className="absolute inset-0 opacity-20"
+              style={{
+                backgroundImage:
+                  'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.5), transparent 45%), radial-gradient(circle at 80% 80%, rgba(255,255,255,0.35), transparent 45%)',
+              }}
+            />
+            <h2 className="relative font-display text-2xl font-semibold tracking-tight text-brand-ink sm:text-3xl">{t.cta.title}</h2>
+            <p className="relative mt-3 text-[15px] text-brand-ink/85">{t.cta.body}</p>
+            <Link to="/register" className="relative mt-8 inline-block">
+              <Button
+                size="lg"
+                className="bg-white text-brand-2 shadow-pop hover:bg-white hover:brightness-95 dark:bg-[#06211e] dark:text-brand"
+              >
+                {t.cta.button}
+                <ArrowRight className="size-4" />
+              </Button>
+            </Link>
+          </div>
+        </Reveal>
+      </section>
+    </div>
+  )
+}
