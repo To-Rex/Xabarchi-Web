@@ -257,7 +257,7 @@ function HeroPhone({ appName, dashboardChip }: { appName: string; dashboardChip:
       if (cancelled) return
       const seed = SIM_POOL[simMessageId % SIM_POOL.length]
       const msgId = ++simMessageId
-      setItems((prev) => [...prev.slice(-2), { id: msgId, ...seed, stage: 0 }])
+      setItems((prev) => [...prev.slice(-4), { id: msgId, ...seed, stage: 0 }])
       timers.push(
         setTimeout(() => setItems((prev) => prev.map((m) => (m.id === msgId ? { ...m, stage: 1 } : m))), 1100),
         setTimeout(() => setItems((prev) => prev.map((m) => (m.id === msgId ? { ...m, stage: 2 } : m))), 2300),
@@ -298,62 +298,91 @@ function HeroPhone({ appName, dashboardChip }: { appName: string; dashboardChip:
         />
       </svg>
 
-      {/* the phone */}
+      {/* the phone — iPhone 17 Pro Max */}
       <motion.div
         initial={{ opacity: 0, y: 28, rotate: -1.5 }}
         animate={{ opacity: 1, y: 0, rotate: 0 }}
         transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
-        className="relative ml-auto w-[290px] rounded-[2.4rem] border border-line-2 bg-surface p-3 shadow-pop sm:w-[320px]"
+        className="relative ml-auto w-[270px] sm:w-[290px]"
       >
-        <div className="rounded-[1.9rem] bg-sunken p-4 dark:bg-bg">
-          {/* status bar */}
-          <div className="flex items-center justify-between px-1 text-[10px] font-medium text-ink-3">
-            <span className="tnum">09:41</span>
-            <span className="flex items-center gap-1">
-              <svg viewBox="0 0 14 10" className="h-2.5 w-3.5" fill="currentColor" aria-hidden>
-                <rect x="0" y="6" width="2.4" height="4" rx="0.6" />
-                <rect x="3.8" y="4" width="2.4" height="6" rx="0.6" />
-                <rect x="7.6" y="2" width="2.4" height="8" rx="0.6" />
-                <rect x="11.4" y="0" width="2.4" height="10" rx="0.6" opacity="0.35" />
-              </svg>
-              Ucell
-            </span>
-          </div>
-          {/* app header */}
-          <div className="mt-3 flex items-center gap-2.5 rounded-2xl bg-surface px-3.5 py-3 shadow-card">
-            <span className="flex size-8 items-center justify-center rounded-xl bg-brand">
-              <Send className="size-4 text-brand-ink" />
-            </span>
-            <div className="flex-1">
-              <p className="text-[13px] font-semibold leading-tight text-ink">{appName}</p>
-              <p className="flex items-center gap-1.5 text-[11px] text-ok">
-                <span className="size-1.5 rounded-full bg-ok" />
-                Gateway aktiv
-              </p>
-            </div>
-          </div>
-          {/* live message feed */}
-          <div className="mt-3 flex h-[248px] flex-col justify-end gap-2 overflow-hidden">
-            <AnimatePresence initial={false}>
-              {items.map((message) => (
-                <motion.div
-                  key={message.id}
-                  layout
-                  initial={{ opacity: 0, y: 22, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -14, scale: 0.97 }}
-                  transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-                  className="rounded-2xl rounded-br-md bg-surface p-3 shadow-card"
-                >
-                  <p className="font-mono text-[11px] text-ink-3">{message.to}</p>
-                  <p className="mt-1 text-[12.5px] leading-snug text-ink">{message.text}</p>
-                  <div className="mt-1.5 flex items-center justify-end gap-1 text-[10px] text-ink-3">
-                    <span className="tnum">09:41</span>
-                    <StageTicks stage={message.stage} />
+        {/* titanium frame */}
+        <div className="relative rounded-[3rem] bg-gradient-to-b from-zinc-300 via-zinc-400 to-zinc-300 p-[3px] shadow-pop dark:from-zinc-600 dark:via-zinc-700 dark:to-zinc-600">
+          {/* action button */}
+          <span aria-hidden className="absolute -left-[2px] top-[5.5rem] h-6 w-[3px] rounded-l-md bg-zinc-400 dark:bg-zinc-600" />
+          {/* volume up / down */}
+          <span aria-hidden className="absolute -left-[2px] top-[8.5rem] h-11 w-[3px] rounded-l-md bg-zinc-400 dark:bg-zinc-600" />
+          <span aria-hidden className="absolute -left-[2px] top-[11.75rem] h-11 w-[3px] rounded-l-md bg-zinc-400 dark:bg-zinc-600" />
+          {/* power button */}
+          <span aria-hidden className="absolute -right-[2px] top-[9.5rem] h-16 w-[3px] rounded-r-md bg-zinc-400 dark:bg-zinc-600" />
+          {/* camera control */}
+          <span aria-hidden className="absolute -right-[2px] top-[23rem] h-9 w-[3px] rounded-r-md bg-zinc-400 dark:bg-zinc-600" />
+          {/* black bezel */}
+          <div className="rounded-[2.85rem] bg-zinc-950 p-[7px]">
+            {/* edge-to-edge screen */}
+            <div className="relative overflow-hidden rounded-[2.45rem] bg-sunken dark:bg-bg">
+              {/* Dynamic Island */}
+              <div className="absolute left-1/2 top-2.5 z-10 flex h-[26px] w-[92px] -translate-x-1/2 items-center justify-end rounded-full bg-zinc-950 pr-2.5">
+                <span className="size-2.5 rounded-full bg-zinc-800 ring-1 ring-zinc-700/70" />
+              </div>
+              <div className="px-4 pb-2 pt-2.5">
+                {/* status bar */}
+                <div className="flex h-[26px] items-center justify-between px-2 text-[11px] font-semibold text-ink-2">
+                  <span className="tnum">09:41</span>
+                  <span className="flex items-center gap-1.5 text-[10px] font-medium text-ink-3">
+                    <svg viewBox="0 0 14 10" className="h-2.5 w-3.5" fill="currentColor" aria-hidden>
+                      <rect x="0" y="6" width="2.4" height="4" rx="0.6" />
+                      <rect x="3.8" y="4" width="2.4" height="6" rx="0.6" />
+                      <rect x="7.6" y="2" width="2.4" height="8" rx="0.6" />
+                      <rect x="11.4" y="0" width="2.4" height="10" rx="0.6" opacity="0.35" />
+                    </svg>
+                    Ucell
+                    <svg viewBox="0 0 25 12" className="h-3 w-[25px]" aria-hidden>
+                      <rect x="0.5" y="0.5" width="21" height="11" rx="3.5" fill="none" stroke="currentColor" opacity="0.4" />
+                      <rect x="2" y="2" width="15" height="8" rx="2" fill="currentColor" />
+                      <path d="M23.5 4v4a2.2 2.2 0 0 0 0-4Z" fill="currentColor" opacity="0.4" />
+                    </svg>
+                  </span>
+                </div>
+                {/* app header */}
+                <div className="mt-2.5 flex items-center gap-2.5 rounded-2xl bg-surface px-3.5 py-3 shadow-card">
+                  <span className="flex size-8 items-center justify-center rounded-xl bg-brand">
+                    <Send className="size-4 text-brand-ink" />
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-[13px] font-semibold leading-tight text-ink">{appName}</p>
+                    <p className="flex items-center gap-1.5 text-[11px] text-ok">
+                      <span className="size-1.5 rounded-full bg-ok" />
+                      Gateway aktiv
+                    </p>
                   </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                </div>
+                {/* live message feed */}
+                <div className="mt-3 flex h-[440px] flex-col justify-end gap-2 overflow-hidden">
+                  <AnimatePresence initial={false}>
+                    {items.map((message) => (
+                      <motion.div
+                        key={message.id}
+                        layout
+                        initial={{ opacity: 0, y: 22, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -14, scale: 0.97 }}
+                        transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                        className="rounded-2xl rounded-br-md bg-surface p-3 shadow-card"
+                      >
+                        <p className="font-mono text-[11px] text-ink-3">{message.to}</p>
+                        <p className="mt-1 text-[12.5px] leading-snug text-ink">{message.text}</p>
+                        <div className="mt-1.5 flex items-center justify-end gap-1 text-[10px] text-ink-3">
+                          <span className="tnum">09:41</span>
+                          <StageTicks stage={message.stage} />
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+                {/* home indicator */}
+                <div aria-hidden className="mx-auto mt-2 h-1 w-28 rounded-full bg-ink/25" />
+              </div>
+            </div>
           </div>
         </div>
       </motion.div>
@@ -385,7 +414,7 @@ export default function HomePage() {
               'radial-gradient(60% 50% at 70% 10%, var(--x-brand-glow), transparent 70%)',
           }}
         />
-        <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 pb-20 pt-14 lg:grid-cols-[1.05fr_0.95fr] lg:pb-28 lg:pt-20">
+        <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 pb-14 pt-10 lg:grid-cols-[1.05fr_0.95fr] lg:pb-16 lg:pt-12">
           <div>
             <motion.p
               initial={{ opacity: 0, y: 12 }}
