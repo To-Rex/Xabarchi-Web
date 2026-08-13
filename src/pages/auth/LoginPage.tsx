@@ -5,7 +5,7 @@ import { Eye, EyeOff, Lock, Mail, MailWarning, PlayCircle } from 'lucide-react'
 import { useT } from '@/shared/i18n'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
 import { ApiError } from '@/shared/api/client'
-import { Button, Input } from '@/shared/ui'
+import { Button, Input, Modal } from '@/shared/ui'
 import { login, resendVerification } from '@/features/auth/model/authStore'
 import { SocialAuth } from './SocialAuth'
 
@@ -29,9 +29,12 @@ const dict = {
       network: 'Server bilan bog‘lanib bo‘lmadi. Qayta urinib ko‘ring.',
     },
     showPassword: 'Parolni ko‘rsatish',
-    notVerified: 'Emailingiz hali tasdiqlanmagan. Pochtangizdagi havolani bosing yoki xatni qayta yuboring.',
-    resendVerify: 'Tasdiqlash xatini qayta yuborish',
+    verifyTitle: 'Emailingizni tasdiqlang',
+    verifyBody: 'Hisobingizga kirishdan oldin emailingizni tasdiqlashingiz kerak. Sizga yangi tasdiqlash havolasini yubordik — pochtangizdagi havolani bosing.',
+    verifySpam: 'Xat kelmadimi? “Spam” papkasini ham tekshiring.',
+    resendVerify: 'Xatni qayta yuborish',
     resendDone: 'Yuborildi ✓',
+    close: 'Yopish',
   },
   ru: {
     meta: 'Вход — Xabarchi',
@@ -52,9 +55,12 @@ const dict = {
       network: 'Не удалось связаться с сервером. Попробуйте ещё раз.',
     },
     showPassword: 'Показать пароль',
-    notVerified: 'Email ещё не подтверждён. Перейдите по ссылке из письма или отправьте его снова.',
-    resendVerify: 'Отправить письмо снова',
+    verifyTitle: 'Подтвердите email',
+    verifyBody: 'Перед входом нужно подтвердить email. Мы отправили вам новую ссылку — перейдите по ней из письма.',
+    verifySpam: 'Письма нет? Проверьте папку «Спам».',
+    resendVerify: 'Отправить снова',
     resendDone: 'Отправлено ✓',
+    close: 'Закрыть',
   },
   en: {
     meta: 'Sign in — Xabarchi',
@@ -75,9 +81,12 @@ const dict = {
       network: 'Could not reach the server. Please try again.',
     },
     showPassword: 'Show password',
-    notVerified: 'Your email isn’t verified yet. Click the link in your inbox, or resend the email.',
-    resendVerify: 'Resend verification email',
+    verifyTitle: 'Verify your email',
+    verifyBody: 'You need to verify your email before signing in. We’ve sent you a fresh verification link — just click it in your inbox.',
+    verifySpam: 'No email? Check your “Spam” folder too.',
+    resendVerify: 'Resend email',
     resendDone: 'Sent ✓',
+    close: 'Close',
   },
 }
 
@@ -187,17 +196,6 @@ export default function LoginPage() {
           </Link>
         </div>
         {errors.form && <p className="text-[13px] font-medium text-danger">{errors.form}</p>}
-        {needsVerify && (
-          <div className="rounded-xl bg-gold-soft p-3.5">
-            <p className="flex items-start gap-2 text-[13px] leading-relaxed text-gold">
-              <MailWarning className="mt-0.5 size-4 shrink-0" />
-              {t.notVerified}
-            </p>
-            <Button type="button" variant="secondary" size="sm" className="mt-2.5" loading={resending} disabled={resent} onClick={resend}>
-              {resent ? t.resendDone : t.resendVerify}
-            </Button>
-          </div>
-        )}
         <Button type="submit" loading={loading} className="w-full" size="lg">
           {t.submit}
         </Button>
@@ -219,6 +217,34 @@ export default function LoginPage() {
           {t.register}
         </Link>
       </p>
+
+      <Modal
+        open={needsVerify}
+        onClose={() => setNeedsVerify(false)}
+        title={t.verifyTitle}
+        closeLabel={t.close}
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setNeedsVerify(false)}>{t.close}</Button>
+            <Button loading={resending} disabled={resent} onClick={resend}>
+              <Mail className="size-4" />
+              {resent ? t.resendDone : t.resendVerify}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col items-center text-center">
+          <span className="flex size-14 items-center justify-center rounded-2xl bg-gold-soft text-gold">
+            <MailWarning className="size-7" />
+          </span>
+          <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-2">{t.verifyBody}</p>
+          {EMAIL_RE.test(email) && (
+            <p className="tnum mt-3 rounded-lg bg-sunken px-3 py-1.5 font-mono text-sm font-medium text-ink">{email}</p>
+          )}
+          <p className="mt-3 text-xs text-ink-3">{t.verifySpam}</p>
+        </div>
+      </Modal>
     </motion.div>
   )
 }
