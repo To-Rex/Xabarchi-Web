@@ -1,18 +1,19 @@
 import { Link } from 'react-router-dom'
-import { motion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { ArrowUpRight, ArrowDownRight, BatteryLow, CheckCheck, Clock4, PenLine, Smartphone, Send } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, BatteryLow, CheckCheck, Clock4, PenLine, Radio, Smartphone, Send } from 'lucide-react'
 import { useLang, useT } from '@/shared/i18n'
 import { commonDict } from '@/shared/i18n/common'
 import { useAsync } from '@/shared/lib/useAsync'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
 import { formatDate, formatDayMonth, formatNumber, formatPhone, formatRelative } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/cn'
-import { user } from '@/shared/mock/db'
-import { AnimatedNumber, Badge, Button, Card, CardBody, CardHeader, CardTitle, EmptyState, MessageStatusBadge, PageHeader, Skeleton } from '@/shared/ui'
+import { useCurrentUser } from '@/features/auth/model/authStore'
+import { AnimatedNumber, Badge, Button, Card, CardBody, CardHeader, CardTitle, EmptyState, MessageStatusBadge, PageHeader, PriorityBadge, Skeleton } from '@/shared/ui'
 import { useChartPalette } from '@/shared/charts/tokens'
 import { ChartTooltipCard } from '@/shared/charts/ChartTooltip'
 import { fetchOverview } from '@/features/dashboard/api/repository'
+import { useLiveQueue } from '@/features/realtime/model/liveQueue'
 
 const dict = {
   uz: {
@@ -32,6 +33,16 @@ const dict = {
     chart: { title: 'SMS dinamikasi', legend: 'Yuborilgan', days30: "So'nggi 30 kun" },
     devices: { title: 'Qurilmalar', battery: 'batareya', todaySent: 'bugun' },
     recent: { title: "So'nggi xabarlar", empty: 'Hali xabar yuborilmagan', emptyBody: 'Birinchi SMSingizni yuboring — bu bir daqiqa vaqt oladi.' },
+    live: {
+      title: 'Jonli navbat',
+      realtime: 'Realtime',
+      polling: 'Polling',
+      sending: 'Yuborilmoqda',
+      idle: 'Navbat kutilmoqda',
+      sent: 'shu seansda yuborildi',
+      lanes: { urgent: 'Tezkor', transactional: 'Tranzaksion', bulk: 'Ommaviy' },
+      lastSent: "So'nggi yuborilganlar",
+    },
   },
   ru: {
     meta: 'Панель управления — Xabarchi',
@@ -50,6 +61,16 @@ const dict = {
     chart: { title: 'Динамика SMS', legend: 'Отправлено', days30: 'Последние 30 дней' },
     devices: { title: 'Устройства', battery: 'батарея', todaySent: 'сегодня' },
     recent: { title: 'Последние сообщения', empty: 'Сообщений пока нет', emptyBody: 'Отправьте первое SMS — это займёт минуту.' },
+    live: {
+      title: 'Живая очередь',
+      realtime: 'Realtime',
+      polling: 'Polling',
+      sending: 'Отправляется',
+      idle: 'Очередь пуста',
+      sent: 'отправлено за сессию',
+      lanes: { urgent: 'Срочные', transactional: 'Транзакционные', bulk: 'Массовые' },
+      lastSent: 'Последние отправленные',
+    },
   },
   en: {
     meta: 'Dashboard — Xabarchi',
@@ -68,7 +89,104 @@ const dict = {
     chart: { title: 'SMS activity', legend: 'Sent', days30: 'Last 30 days' },
     devices: { title: 'Devices', battery: 'battery', todaySent: 'today' },
     recent: { title: 'Recent messages', empty: 'No messages yet', emptyBody: 'Send your first SMS — it takes a minute.' },
+    live: {
+      title: 'Live queue',
+      realtime: 'Realtime',
+      polling: 'Polling',
+      sending: 'Sending',
+      idle: 'Queue is idle',
+      sent: 'sent this session',
+      lanes: { urgent: 'Urgent', transactional: 'Transactional', bulk: 'Bulk' },
+      lastSent: 'Recently sent',
+    },
   },
+}
+
+/** Realtime gateway monitor — the web mirror of the mobile app's live feed. */
+function LiveQueueCard() {
+  const t = useT(dict)
+  const live = useLiveQueue()
+  const totalPending = live.pending.urgent + live.pending.transactional + live.pending.bulk
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.24 }}>
+      <Card className="mt-5">
+        <CardBody className="flex flex-col gap-4 lg:flex-row lg:items-center">
+          {/* connection + title */}
+          <div className="flex min-w-44 items-center gap-3">
+            <span className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand">
+              <Radio className="size-5" />
+              <span
+                className={cn(
+                  'absolute -right-0.5 -top-0.5 size-2.5 rounded-full ring-2 ring-surface',
+                  live.connection === 'realtime' ? 'animate-pulse-soft bg-ok' : 'bg-gold',
+                )}
+              />
+            </span>
+            <div>
+              <p className="text-[13px] font-semibold text-ink">{t.live.title}</p>
+              <Badge tone={live.connection === 'realtime' ? 'ok' : 'gold'} className="mt-1">
+                {live.connection === 'realtime' ? t.live.realtime : t.live.polling}
+              </Badge>
+            </div>
+          </div>
+
+          {/* priority lanes */}
+          <div className="grid flex-1 grid-cols-3 gap-2.5">
+            {(['urgent', 'transactional', 'bulk'] as const).map((lane) => (
+              <div key={lane} className="rounded-xl border border-line bg-sunken/50 px-3 py-2.5">
+                <p className="truncate text-[11px] font-medium text-ink-3">{t.live.lanes[lane]}</p>
+                <p className="tnum mt-0.5 font-display text-lg font-semibold text-ink">
+                  <AnimatedNumber value={live.pending[lane]} format={(v) => String(Math.round(v))} />
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* currently sending */}
+          <div className="min-w-0 flex-1 lg:max-w-72">
+            <AnimatePresence mode="popLayout" initial={false}>
+              {live.sending ? (
+                <motion.div
+                  key={live.sending.to + live.sending.priority}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.25 }}
+                  className="flex items-center gap-2.5 rounded-xl border border-brand/30 bg-brand-soft/50 px-3 py-2.5"
+                >
+                  <Send className="size-4 shrink-0 animate-pulse-soft text-brand" />
+                  <span className="min-w-0">
+                    <span className="block text-[11px] font-medium text-ink-3">{t.live.sending}</span>
+                    <span className="tnum block truncate font-mono text-[13px] font-medium text-ink">{live.sending.to}</span>
+                  </span>
+                  <PriorityBadge priority={live.sending.priority} className="ml-auto shrink-0" />
+                </motion.div>
+              ) : (
+                <motion.p
+                  key="idle"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="rounded-xl border border-dashed border-line px-3 py-3 text-center text-[13px] text-ink-3"
+                >
+                  {totalPending === 0 ? t.live.idle : '…'}
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* session counter */}
+          <div className="shrink-0 text-right lg:w-32">
+            <p className="tnum font-display text-2xl font-semibold text-brand">
+              <AnimatedNumber value={live.sentThisSession} format={(v) => String(Math.round(v))} />
+            </p>
+            <p className="text-[11px] leading-tight text-ink-3">{t.live.sent}</p>
+          </div>
+        </CardBody>
+      </Card>
+    </motion.div>
+  )
 }
 
 function StatCardSkeleton() {
@@ -89,6 +207,7 @@ export default function OverviewPage() {
   const { lang } = useLang()
   usePageMeta(t.meta)
   const palette = useChartPalette()
+  const user = useCurrentUser()
   const { data, loading, error, refetch } = useAsync(fetchOverview)
 
   const hour = new Date().getHours()
@@ -109,7 +228,7 @@ export default function OverviewPage() {
   return (
     <div>
       <PageHeader
-        title={`${greeting}, ${user.firstName}!`}
+        title={user ? `${greeting}, ${user.firstName}!` : `${greeting}!`}
         subtitle={t.subtitle}
         actions={
           <Link to="/app/sms/new">
@@ -194,6 +313,9 @@ export default function OverviewPage() {
           </>
         )}
       </div>
+
+      {/* Live gateway queue */}
+      <LiveQueueCard />
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[1.6fr_1fr]">
         {/* Activity chart */}

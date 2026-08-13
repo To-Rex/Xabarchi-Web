@@ -1,12 +1,13 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
-import { Building2, CheckCircle2, Lock, Mail, UserRound } from 'lucide-react'
+import { Building2, CheckCircle2, Lock, Mail, Phone, UserRound } from 'lucide-react'
 import { useT } from '@/shared/i18n'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
-import { delay } from '@/shared/api/mockClient'
+import { ApiError } from '@/shared/api/client'
 import { Button, Input } from '@/shared/ui'
-import { signIn } from '@/features/auth/model/authStore'
+import { register } from '@/features/auth/model/authStore'
+import { SocialAuth } from './SocialAuth'
 
 const dict = {
   uz: {
@@ -21,9 +22,18 @@ const dict = {
     haveAccount: 'Hisobingiz bormi?',
     login: 'Kirish',
     terms: 'Davom etish orqali siz foydalanish shartlari va maxfiylik siyosatiga rozilik bildirasiz.',
+    phone: 'Telefon',
     successTitle: 'Hisobingiz tayyor!',
     successBody: 'Boshqaruv paneliga yo‘naltirilmoqdasiz…',
-    errors: { name: 'Ismingizni kiriting', email: 'To‘g‘ri email kiriting', password: 'Parol kamida 6 belgi bo‘lsin' },
+    errors: {
+      name: 'Ismingizni kiriting',
+      email: 'To‘g‘ri email kiriting',
+      password: 'Parol kamida 8 belgi bo‘lsin',
+      phone: 'Telefon raqamini kiriting',
+      company: 'Kompaniya nomini kiriting',
+      emailTaken: 'Bu email allaqachon ro‘yxatdan o‘tgan',
+      network: 'Server bilan bog‘lanib bo‘lmadi. Qayta urinib ko‘ring.',
+    },
   },
   ru: {
     meta: 'Регистрация — Xabarchi',
@@ -37,9 +47,18 @@ const dict = {
     haveAccount: 'Уже есть аккаунт?',
     login: 'Войти',
     terms: 'Продолжая, вы соглашаетесь с условиями использования и политикой конфиденциальности.',
+    phone: 'Телефон',
     successTitle: 'Аккаунт готов!',
     successBody: 'Перенаправляем в панель управления…',
-    errors: { name: 'Введите имя', email: 'Введите корректный email', password: 'Пароль — минимум 6 символов' },
+    errors: {
+      name: 'Введите имя',
+      email: 'Введите корректный email',
+      password: 'Пароль — минимум 8 символов',
+      phone: 'Введите номер телефона',
+      company: 'Введите название компании',
+      emailTaken: 'Этот email уже зарегистрирован',
+      network: 'Не удалось связаться с сервером. Попробуйте ещё раз.',
+    },
   },
   en: {
     meta: 'Create account — Xabarchi',
@@ -53,9 +72,18 @@ const dict = {
     haveAccount: 'Already have an account?',
     login: 'Sign in',
     terms: 'By continuing you agree to the terms of service and privacy policy.',
+    phone: 'Phone',
     successTitle: 'Your account is ready!',
     successBody: 'Taking you to the dashboard…',
-    errors: { name: 'Enter your name', email: 'Enter a valid email', password: 'Password must be at least 6 characters' },
+    errors: {
+      name: 'Enter your name',
+      email: 'Enter a valid email',
+      password: 'Password must be at least 8 characters',
+      phone: 'Enter your phone number',
+      company: 'Enter your company name',
+      emailTaken: 'This email is already registered',
+      network: 'Could not reach the server. Please try again.',
+    },
   },
 }
 
@@ -65,8 +93,8 @@ export default function RegisterPage() {
   const t = useT(dict)
   usePageMeta(t.meta)
   const navigate = useNavigate()
-  const [form, setForm] = useState({ name: '', company: '', email: '', password: '' })
-  const [errors, setErrors] = useState<Partial<typeof form>>({})
+  const [form, setForm] = useState({ name: '', company: '', email: '', phone: '', password: '' })
+  const [errors, setErrors] = useState<Partial<typeof form> & { form?: string }>({})
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
 
@@ -77,17 +105,37 @@ export default function RegisterPage() {
     event.preventDefault()
     const next: Partial<typeof form> = {}
     if (form.name.trim().length < 2) next.name = t.errors.name
+    if (form.company.trim().length < 1) next.company = t.errors.company
     if (!EMAIL_RE.test(form.email)) next.email = t.errors.email
-    if (form.password.length < 6) next.password = t.errors.password
+    if (form.phone.replace(/\D/g, '').length < 7) next.phone = t.errors.phone
+    if (form.password.length < 8) next.password = t.errors.password
     setErrors(next)
     if (Object.keys(next).length > 0) return
 
     setLoading(true)
-    await delay(1100)
-    setDone(true)
-    await delay(1400)
-    signIn()
-    navigate('/app', { replace: true })
+    const [firstName, ...rest] = form.name.trim().split(/\s+/)
+    try {
+      await register({
+        firstName,
+        lastName: rest.join(' ') || firstName,
+        email: form.email,
+        phone: form.phone.replace(/\D/g, ''),
+        company: form.company.trim(),
+        password: form.password,
+      })
+      setDone(true)
+      setTimeout(() => navigate('/app', { replace: true }), 1200)
+    } catch (error) {
+      setErrors({
+        form:
+          error instanceof ApiError && error.code === 'email_taken'
+            ? t.errors.emailTaken
+            : error instanceof ApiError
+              ? error.message
+              : t.errors.network,
+      })
+      setLoading(false)
+    }
   }
 
   return (
@@ -119,13 +167,17 @@ export default function RegisterPage() {
 
             <form onSubmit={submit} className="mt-8 space-y-4" noValidate>
               <Input label={t.name} placeholder="Jasur Karimov" value={form.name} onChange={set('name')} error={errors.name} leading={<UserRound className="size-4" />} autoComplete="name" />
-              <Input label={t.company} placeholder="Samarqand Express" value={form.company} onChange={set('company')} leading={<Building2 className="size-4" />} autoComplete="organization" />
+              <Input label={t.company} placeholder="Samarqand Express" value={form.company} onChange={set('company')} error={errors.company} leading={<Building2 className="size-4" />} autoComplete="organization" />
               <Input type="email" label={t.email} placeholder="siz@kompaniya.uz" value={form.email} onChange={set('email')} error={errors.email} leading={<Mail className="size-4" />} autoComplete="email" />
+              <Input type="tel" label={t.phone} placeholder="998 90 123 45 67" value={form.phone} onChange={set('phone')} error={errors.phone} leading={<Phone className="size-4" />} autoComplete="tel" />
               <Input type="password" label={t.password} placeholder="••••••••" value={form.password} onChange={set('password')} error={errors.password} leading={<Lock className="size-4" />} autoComplete="new-password" />
+              {errors.form && <p className="text-[13px] font-medium text-danger">{errors.form}</p>}
               <Button type="submit" loading={loading} className="w-full" size="lg">
                 {t.submit}
               </Button>
             </form>
+
+            <SocialAuth />
 
             <p className="mt-4 text-center text-xs leading-relaxed text-ink-3">{t.terms}</p>
             <p className="mt-6 text-center text-sm text-ink-2">

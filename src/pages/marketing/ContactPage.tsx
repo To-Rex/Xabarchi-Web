@@ -3,7 +3,6 @@ import { AnimatePresence, motion } from 'motion/react'
 import { CheckCircle2, Clock4, Mail, MapPin, Phone, Send } from 'lucide-react'
 import { useT } from '@/shared/i18n'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
-import { simulate } from '@/shared/api/mockClient'
 import { CONTACT } from '@/shared/config/contact'
 import { Button, Input, Reveal, Select, Textarea, useToast } from '@/shared/ui'
 
@@ -140,7 +139,7 @@ export default function ContactPage() {
     if (Object.keys(next).length > 0) return
 
     setSending(true)
-    await simulate(() => undefined, { minDelay: 700, maxDelay: 1200 })
+    await new Promise((resolve) => setTimeout(resolve, 900))
     setSending(false)
     setSent(true)
     toast('success', t.toast)

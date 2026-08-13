@@ -9,7 +9,7 @@ const dict = {
     meta: { title: 'API hujjatlari — Xabarchi', desc: 'Xabarchi REST API: autentifikatsiya, SMS yuborish, statuslar, webhooklar.' },
     title: 'API hujjatlari',
     subtitle: "Xabarchi REST API bilan istalgan tizimdan SMS yuboring. Bazaviy manzil: ",
-    nav: { intro: 'Kirish', auth: 'Autentifikatsiya', send: 'SMS yuborish', list: 'Xabarlar ro‘yxati', status: 'Xabar holati', devices: 'Qurilmalar', webhooks: 'Webhooklar', errors: 'Xatoliklar' },
+    nav: { intro: 'Kirish', auth: 'Autentifikatsiya', send: 'SMS yuborish', list: 'Xabarlar ro‘yxati', status: 'Xabar holati', devices: 'Qurilmalar', telegram: 'Telegram bot', webhooks: 'Webhooklar', errors: 'Xatoliklar' },
     intro: {
       body: "Barcha so'rovlar JSON qabul qiladi va JSON qaytaradi. API kalitini boshqaruv panelining «API» bo'limida yaratasiz. Sinov uchun xab_test_ prefiksli kalitdan foydalaning — xabarlar yuborilmaydi, lekin barcha javoblar haqiqiydek qaytadi.",
     },
@@ -20,6 +20,10 @@ const dict = {
     list: { body: "Xabarlar ro'yxati — sahifalash va status bo'yicha filtr bilan." },
     status: { body: 'Bitta xabarning joriy holatini olish. Holatlar: queued → sending → sent → delivered yoki failed.' },
     devices: { body: "Ulangan qurilmalar ro'yxati: holat, batareya, signal va kunlik limit." },
+    telegram: {
+      body: "Telegram bot — alohida xizmat: har bir kompaniya o'z botini ulaydi va obunachilariga istalgan turdagi kontent yuboradi. kind maydoni turini belgilaydi: text, photo, video, document yoki post (matn + inline tugmalar). Media uchun media_url beriladi, post uchun buttons massivi qo'shiladi. Kalitga telegram.send ruxsati kerak.",
+      list: "Obunachilar ro'yxati — sahifalash bilan.",
+    },
     webhooks: { body: "Xabar holati o'zgarganda sizning URL manzilingizga POST so'rov yuboramiz. Har bir so'rov X-Xabarchi-Signature sarlavhasi bilan imzolanadi." },
     errors: { body: 'API standart HTTP kodlarini ishlatadi. Xato tanasida code va message maydonlari bo‘ladi.' },
     errorRows: [
@@ -34,7 +38,7 @@ const dict = {
     meta: { title: 'API документация — Xabarchi', desc: 'Xabarchi REST API: аутентификация, отправка SMS, статусы, вебхуки.' },
     title: 'API документация',
     subtitle: 'Отправляйте SMS из любой системы через Xabarchi REST API. Базовый адрес: ',
-    nav: { intro: 'Введение', auth: 'Аутентификация', send: 'Отправка SMS', list: 'Список сообщений', status: 'Статус сообщения', devices: 'Устройства', webhooks: 'Вебхуки', errors: 'Ошибки' },
+    nav: { intro: 'Введение', auth: 'Аутентификация', send: 'Отправка SMS', list: 'Список сообщений', status: 'Статус сообщения', devices: 'Устройства', telegram: 'Telegram-бот', webhooks: 'Вебхуки', errors: 'Ошибки' },
     intro: {
       body: 'Все запросы принимают и возвращают JSON. API-ключ создаётся в разделе «API» панели управления. Для тестов используйте ключ с префиксом xab_test_ — сообщения не отправляются, но ответы выглядят как настоящие.',
     },
@@ -43,6 +47,10 @@ const dict = {
     list: { body: 'Список сообщений — с пагинацией и фильтром по статусу.' },
     status: { body: 'Текущий статус одного сообщения. Статусы: queued → sending → sent → delivered или failed.' },
     devices: { body: 'Список подключённых устройств: статус, батарея, сигнал и дневной лимит.' },
+    telegram: {
+      body: 'Telegram-бот — отдельный сервис: каждая компания подключает своего бота и отправляет подписчикам контент любого типа. Поле kind задаёт тип: text, photo, video, document или post (текст + inline-кнопки). Для медиа передаётся media_url, для поста — массив buttons. Ключу нужно право telegram.send.',
+      list: 'Список подписчиков — с пагинацией.',
+    },
     webhooks: { body: 'При смене статуса сообщения мы отправляем POST на ваш URL. Каждый запрос подписан заголовком X-Xabarchi-Signature.' },
     errors: { body: 'API использует стандартные HTTP-коды. В теле ошибки — поля code и message.' },
     errorRows: [
@@ -57,7 +65,7 @@ const dict = {
     meta: { title: 'API docs — Xabarchi', desc: 'Xabarchi REST API: authentication, sending SMS, statuses, webhooks.' },
     title: 'API documentation',
     subtitle: 'Send SMS from any system with the Xabarchi REST API. Base URL: ',
-    nav: { intro: 'Introduction', auth: 'Authentication', send: 'Send an SMS', list: 'List messages', status: 'Message status', devices: 'Devices', webhooks: 'Webhooks', errors: 'Errors' },
+    nav: { intro: 'Introduction', auth: 'Authentication', send: 'Send an SMS', list: 'List messages', status: 'Message status', devices: 'Devices', telegram: 'Telegram bot', webhooks: 'Webhooks', errors: 'Errors' },
     intro: {
       body: 'All endpoints accept and return JSON. Create an API key in the dashboard’s “API” section. For testing use a key with the xab_test_ prefix — nothing is sent, but responses look real.',
     },
@@ -66,6 +74,10 @@ const dict = {
     list: { body: 'List messages — with pagination and a status filter.' },
     status: { body: 'Get the current state of one message. States: queued → sending → sent → delivered or failed.' },
     devices: { body: 'List connected devices: status, battery, signal and daily limit.' },
+    telegram: {
+      body: 'The Telegram bot is a standalone service: each company connects its own bot and pushes any kind of content to its subscribers. The kind field selects the type: text, photo, video, document or post (text + inline buttons). Media kinds take a media_url; posts take a buttons array. The key needs the telegram.send scope.',
+      list: 'List subscribers — with pagination.',
+    },
     webhooks: { body: 'When a message changes state we POST to your URL. Every request is signed with the X-Xabarchi-Signature header.' },
     errors: { body: 'The API uses standard HTTP codes. Error bodies carry code and message fields.' },
     errorRows: [
@@ -253,6 +265,49 @@ export default function DocsPage() {
       "daily_limit": 800
     }
   ]
+}`}
+            />
+          </Section>
+
+          <Section id="telegram" title={t.nav.telegram}>
+            <Endpoint method="POST" path="/v1/telegram/messages" />
+            <p className="text-sm leading-relaxed text-ink-2">{t.telegram.body}</p>
+            <CodeBlock
+              title="POST /v1/telegram/messages"
+              code={`curl https://api.xabarchi.uz/v1/telegram/messages \\
+  -H "Authorization: Bearer xab_live_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "kind": "post",
+    "text": "Yangi filial ochildi!",
+    "media_url": "https://example.uz/filial.jpg",
+    "buttons": [
+      { "label": "Buyurtma berish", "url": "https://example.uz/order" }
+    ]
+  }'
+
+{
+  "id": "tg_0107",
+  "kind": "post",
+  "audience": 1284,
+  "status": "queued"
+}`}
+            />
+            <Endpoint method="GET" path="/v1/telegram/subscribers?limit=20" />
+            <p className="text-sm leading-relaxed text-ink-2">{t.telegram.list}</p>
+            <CodeBlock
+              title="200 OK"
+              code={`{
+  "data": [
+    {
+      "id": "sub_01",
+      "name": "Aziz Karimov",
+      "username": "aziz_uz",
+      "joined_at": "2026-07-02T14:11:08Z"
+    }
+  ],
+  "has_more": true,
+  "next_cursor": "c_4h8s"
 }`}
             />
           </Section>

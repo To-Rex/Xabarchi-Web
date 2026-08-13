@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { flushSync } from 'react-dom'
+import { storageGet, storageSet } from '@/shared/lib/storage'
 
 export type ThemePref = 'light' | 'dark' | 'system'
 
@@ -26,7 +27,7 @@ function resolveDark(pref: ThemePref) {
 }
 
 function readStoredPref(): ThemePref {
-  const raw = localStorage.getItem(STORAGE_KEY)
+  const raw = storageGet(STORAGE_KEY)
   return raw === 'light' || raw === 'dark' || raw === 'system' ? raw : 'system'
 }
 
@@ -41,7 +42,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setPref = useCallback(
     (next: ThemePref, origin?: { x: number; y: number }) => {
-      localStorage.setItem(STORAGE_KEY, next)
+      storageSet(STORAGE_KEY, next)
       setPrefState(next)
       const nextDark = resolveDark(next)
       const current = document.documentElement.classList.contains('dark')

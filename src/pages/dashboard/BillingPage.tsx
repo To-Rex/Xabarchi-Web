@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { motion } from 'motion/react'
-import { Check, CreditCard, Download, FileText } from 'lucide-react'
+import { Check, CreditCard, FileText } from 'lucide-react'
 import { useLang, useT } from '@/shared/i18n'
 import { commonDict } from '@/shared/i18n/common'
 import { useAsync } from '@/shared/lib/useAsync'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
 import { formatDate, formatMoney, formatNumber } from '@/shared/lib/format'
-import { simulate } from '@/shared/api/mockClient'
-import { invoices, plans, user } from '@/shared/mock/db'
-import type { Plan } from '@/shared/mock/types'
+import { ApiError } from '@/shared/api/client'
+import type { Plan } from '@/shared/api/types'
 import { cn } from '@/shared/lib/cn'
+import { fetchInvoices, fetchPlans, openPortal, startCheckout } from '@/features/billing/api/repository'
+import { fetchOverview } from '@/features/dashboard/api/repository'
+import { useCurrentUser } from '@/features/auth/model/authStore'
 import { Badge, Button, Card, CardBody, CardHeader, CardTitle, EmptyState, Modal, PageHeader, ProgressBar, Skeleton, useToast } from '@/shared/ui'
 
 const dict = {
@@ -87,8 +89,10 @@ const dict = {
   },
 }
 
-const fetchBilling = () =>
-  simulate(() => ({ plans, invoices, currentPlanId: user.planId, used: 8000 }))
+async function fetchBilling() {
+  const [plans, invoices, overview] = await Promise.all([fetchPlans(), fetchInvoices(), fetchOverview()])
+  return { plans, invoices, used: overview.monthlyUsed }
+}
 
 export default function BillingPage() {
   const t = useT(dict)
@@ -96,22 +100,27 @@ export default function BillingPage() {
   const { lang } = useLang()
   usePageMeta(t.meta)
   const toast = useToast()
+  const user = useCurrentUser()
 
   const { data, loading, error, refetch } = useAsync(fetchBilling)
-  const [currentPlanId, setCurrentPlanId] = useState<Plan['id'] | null>(null)
   const [switching, setSwitching] = useState<Plan | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const planId = currentPlanId ?? data?.currentPlanId
+  const planId = user?.planId
 
   const confirmSwitch = async () => {
     if (!switching) return
     setBusy(true)
-    await simulate(() => undefined, { minDelay: 500, maxDelay: 900 })
-    setCurrentPlanId(switching.id)
-    setBusy(false)
-    setSwitching(null)
-    toast('success', t.switchedToast, t.planNames[switching.id])
+    try {
+      // Paid plans go through Polar checkout; downgrading to the free plan
+      // is done by cancelling the subscription in the Polar customer portal.
+      const url = switching.monthlyPrice === 0 ? await openPortal() : await startCheckout(switching.id)
+      window.location.href = url
+    } catch (err) {
+      toast('error', err instanceof ApiError ? err.message : c.errorTitle)
+      setBusy(false)
+      setSwitching(null)
+    }
   }
 
   if (error) {
@@ -237,8 +246,7 @@ export default function BillingPage() {
                     <th className="py-2.5 pr-4 font-semibold">{t.cols.number}</th>
                     <th className="py-2.5 pr-4 font-semibold">{t.cols.period}</th>
                     <th className="py-2.5 pr-4 text-right font-semibold">{t.cols.amount}</th>
-                    <th className="py-2.5 pr-4 font-semibold">{t.cols.status}</th>
-                    <th className="py-2.5" />
+                    <th className="py-2.5 font-semibold">{t.cols.status}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -250,25 +258,16 @@ export default function BillingPage() {
                         <span className="tnum ml-2 text-xs text-ink-3">{formatDate(invoice.date, lang)}</span>
                       </td>
                       <td className="tnum py-3 pr-4 text-right font-medium text-ink">{formatMoney(invoice.amount, lang)}</td>
-                      <td className="py-3 pr-4">
+                      <td className="py-3">
                         <Badge tone={invoice.status === 'paid' ? 'ok' : invoice.status === 'due' ? 'gold' : 'danger'}>
                           {t.statuses[invoice.status]}
                         </Badge>
-                      </td>
-                      <td className="py-3 text-right">
-                        <button
-                          onClick={() => toast('info', t.downloadToast, invoice.number)}
-                          aria-label={t.download}
-                          title={t.download}
-                          className="rounded-lg p-2 text-ink-3 transition-colors hover:bg-sunken hover:text-ink"
-                        >
-                          <Download className="size-4" />
-                        </button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              {data.invoices.length === 0 && <p className="py-6 text-center text-sm text-ink-3">—</p>}
             </div>
           )}
         </CardBody>

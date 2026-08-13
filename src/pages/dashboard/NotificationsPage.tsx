@@ -4,7 +4,7 @@ import { Bell, BellOff, CheckCheck, CreditCard, MessageSquareText, Settings2, Sm
 import { useLang, useT } from '@/shared/i18n'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
 import { formatRelative } from '@/shared/lib/format'
-import type { AppNotification } from '@/shared/mock/types'
+import type { AppNotification } from '@/shared/api/types'
 import { cn } from '@/shared/lib/cn'
 import { Button, Card, EmptyState, PageHeader, Tabs } from '@/shared/ui'
 import { markAllRead, markRead, useNotifications } from '@/features/notifications/model/store'

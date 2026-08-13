@@ -1,4 +1,4 @@
-import type { MessageStatus } from '@/shared/mock/types'
+import type { MessageStatus } from '@/shared/api/types'
 import { useT } from '@/shared/i18n'
 import { cn } from '@/shared/lib/cn'
 import { Badge } from './Badge'

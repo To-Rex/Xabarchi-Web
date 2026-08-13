@@ -1,15 +1,26 @@
-import { useMemo, useState, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { ArrowLeft, CheckCircle2, Plus, Search, Send, Users, X } from 'lucide-react'
 import { useLang, useT } from '@/shared/i18n'
 import { commonDict } from '@/shared/i18n/common'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
+import { useAsync } from '@/shared/lib/useAsync'
 import { formatNumber, formatPhone, smsSegments } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/cn'
-import { contacts, devices, groups, templates } from '@/shared/mock/db'
-import { Badge, Button, Input, Modal, Select, Textarea, useToast } from '@/shared/ui'
+import { ApiError } from '@/shared/api/client'
+import type { SmsPriority } from '@/shared/api/types'
+import { Badge, Button, Input, Modal, SegmentedControl, Select, Textarea, useToast } from '@/shared/ui'
 import { sendSms } from '@/features/sms/api/repository'
+import { fetchDevices } from '@/features/devices/api/repository'
+import { fetchTemplates } from '@/features/templates/api/repository'
+import { fetchContacts } from '@/features/contacts/api/repository'
+
+/** Reference data the composer needs: devices, templates, contacts, groups. */
+async function fetchComposeRefs() {
+  const [devices, templates, contactsData] = await Promise.all([fetchDevices(), fetchTemplates(), fetchContacts()])
+  return { devices, templates, contacts: contactsData.items, groups: contactsData.groups }
+}
 
 const dict = {
   uz: {
@@ -24,6 +35,13 @@ const dict = {
     message: 'Xabar matni',
     messagePlaceholder: 'Xabaringizni yozing…',
     device: 'Qurilma',
+    priority: 'Yuborish turi',
+    priorities: { urgent: 'Tezkor', transactional: 'Tranzaksion', bulk: 'Ommaviy' },
+    priorityHints: {
+      urgent: 'OTP va shoshilinch xabarlar — navbat boshiga o‘tadi, intervalsiz yuboriladi.',
+      transactional: 'Buyurtma, eslatma kabi xabarlar — qisqa interval bilan.',
+      bulk: 'Aksiya va ommaviy yuborish — sekin qator, kunlik limitga bo‘ysunadi.',
+    },
     submit: 'Yuborish',
     preview: 'Ko‘rinish',
     chars: 'belgi',
@@ -51,6 +69,13 @@ const dict = {
     message: 'Текст сообщения',
     messagePlaceholder: 'Напишите сообщение…',
     device: 'Устройство',
+    priority: 'Тип отправки',
+    priorities: { urgent: 'Срочное', transactional: 'Транзакционное', bulk: 'Массовое' },
+    priorityHints: {
+      urgent: 'OTP и срочные сообщения — идут в начало очереди, без интервала.',
+      transactional: 'Заказы, напоминания — с коротким интервалом.',
+      bulk: 'Акции и массовые рассылки — медленная полоса, в рамках дневного лимита.',
+    },
     submit: 'Отправить',
     preview: 'Превью',
     chars: 'символов',
@@ -78,6 +103,13 @@ const dict = {
     message: 'Message text',
     messagePlaceholder: 'Write your message…',
     device: 'Device',
+    priority: 'Send type',
+    priorities: { urgent: 'Urgent', transactional: 'Transactional', bulk: 'Bulk' },
+    priorityHints: {
+      urgent: 'OTP and time-critical messages — jump the queue, no send interval.',
+      transactional: 'Orders, reminders — a short interval between sends.',
+      bulk: 'Campaigns and mass sends — the slow lane, within the daily limit.',
+    },
     submit: 'Send',
     preview: 'Preview',
     chars: 'chars',
@@ -111,19 +143,39 @@ export default function ComposePage() {
   const location = useLocation()
   const toast = useToast()
 
-  // Prefill when arriving via "Use" on a template card
-  const initialTemplate = templates.find(
-    (entry) => entry.id === (location.state as { templateId?: string } | null)?.templateId,
-  )
+  const { data: refs } = useAsync(fetchComposeRefs)
+  const devices = refs?.devices ?? []
+  const templates = refs?.templates ?? []
+  const contacts = refs?.contacts ?? []
+  const groups = refs?.groups ?? []
 
-  const onlineDevices = devices.filter((device) => device.status === 'online')
   const [recipients, setRecipients] = useState<string[]>([])
   const [phoneInput, setPhoneInput] = useState('')
   const [phoneError, setPhoneError] = useState<string>()
-  const [templateId, setTemplateId] = useState(initialTemplate?.id ?? '')
-  const [text, setText] = useState(initialTemplate?.text ?? '')
+  const [templateId, setTemplateId] = useState('')
+  const [text, setText] = useState('')
   const [textError, setTextError] = useState<string>()
-  const [deviceId, setDeviceId] = useState(onlineDevices[0]?.id ?? devices[0].id)
+  const [deviceId, setDeviceId] = useState('')
+  const [priority, setPriority] = useState<SmsPriority>('transactional')
+
+  // Once reference data lands: pick the default device and apply the
+  // template that a "Use" click on the templates page carried over.
+  useEffect(() => {
+    if (!refs) return
+    if (!deviceId && refs.devices.length > 0) {
+      const online = refs.devices.find((device) => device.status === 'online')
+      setDeviceId((online ?? refs.devices[0]).id)
+    }
+    const wantedTemplate = (location.state as { templateId?: string } | null)?.templateId
+    if (wantedTemplate && !templateId) {
+      const template = refs.templates.find((entry) => entry.id === wantedTemplate)
+      if (template) {
+        setTemplateId(template.id)
+        setText((prev) => prev || template.text)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refs])
   const [sending, setSending] = useState(false)
   const [done, setDone] = useState(false)
   const [contactsOpen, setContactsOpen] = useState(false)
@@ -172,7 +224,7 @@ export default function ComposePage() {
       const matches = !term || `${contact.firstName} ${contact.lastName}`.toLowerCase().includes(term) || contact.phone.includes(term.replace(/\D/g, '') || ' ')
       return inGroup && matches
     })
-  }, [contactSearch, groupFilter])
+  }, [contacts, contactSearch, groupFilter])
 
   const addChecked = () => {
     const phones = contacts.filter((contact) => checked.has(contact.id)).map((contact) => contact.phone)
@@ -194,10 +246,15 @@ export default function ComposePage() {
     if (hasError) return
 
     setSending(true)
-    const created = await sendSms({ to: recipients, text, deviceId })
-    setSending(false)
-    setDone(true)
-    toast('success', t.sentToast, t.sentToastBody(created.length))
+    try {
+      const created = await sendSms({ to: recipients, text, deviceId: deviceId || undefined, priority })
+      setDone(true)
+      toast('success', t.sentToast, t.sentToastBody(created.length))
+    } catch (error) {
+      toast('error', error instanceof ApiError ? error.message : c.errorTitle)
+    } finally {
+      setSending(false)
+    }
   }
 
   if (done) {
@@ -312,6 +369,22 @@ export default function ComposePage() {
               <span className="tnum">{seg.segments} {t.segments}</span>
               {seg.unicode && <Badge tone="gold">{t.unicodeHint}</Badge>}
             </div>
+          </div>
+
+          {/* Priority lane */}
+          <div className="mt-5">
+            <p className="text-[13px] font-medium text-ink-2">{t.priority}</p>
+            <SegmentedControl
+              size="sm"
+              className="mt-1.5"
+              value={priority}
+              onChange={setPriority}
+              segments={(['urgent', 'transactional', 'bulk'] as SmsPriority[]).map((value) => ({
+                value,
+                label: t.priorities[value],
+              }))}
+            />
+            <p className="mt-1.5 text-[13px] text-ink-3">{t.priorityHints[priority]}</p>
           </div>
 
           {/* Device */}

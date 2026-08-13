@@ -1,15 +1,26 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { AnimatePresence, motion } from 'motion/react'
+import {
+  AnimatePresence,
+  motion,
+  useMotionTemplate,
+  useMotionValue,
+  useReducedMotion,
+  useSpring,
+  useTransform,
+} from 'motion/react'
 import {
   ArrowRight,
   BarChart3,
+  Bot,
   Braces,
   FileText,
+  Image,
   QrCode,
   Send,
   ShieldCheck,
   Smartphone,
+  Sparkles,
   Users,
 } from 'lucide-react'
 import { useLang, useT } from '@/shared/i18n'
@@ -67,6 +78,14 @@ const dict = {
       title: 'Bitta so‘rov — SMS yo‘lda',
       body: 'Toza REST API, aniq hujjatlar, webhooklar va rasmiy SDKlar. Sinov kalitini oling-da, 5 daqiqada birinchi xabaringizni yuboring.',
       cta: 'Hujjatlarni ochish',
+    },
+    telegram: {
+      eyebrow: 'Yangi xizmat',
+      title: 'Telegram bot ham — o‘sha bitta paneldan',
+      body: "Kompaniyangizning o'z Telegram botini ulang va obunachilarga istalgan turdagi kontent yuboring — SMS bilan yonma-yon, alohida xizmat sifatida.",
+      kinds: ['Matn', 'Rasm', 'Video', 'Fayllar', 'Tugmali postlar', 'Havolalar'],
+      future: 'Tez orada: bot orqali mijozlar oqimini boshqarish — avto-javoblar, voronkalar va segmentlar.',
+      cta: 'Batafsil hujjatlarda',
     },
     testimonials: {
       eyebrow: 'Mijozlar fikri',
@@ -132,6 +151,14 @@ const dict = {
       body: 'Чистый REST API, понятная документация, вебхуки и официальные SDK. Возьмите тестовый ключ и отправьте первое сообщение за 5 минут.',
       cta: 'Открыть документацию',
     },
+    telegram: {
+      eyebrow: 'Новый сервис',
+      title: 'Telegram-бот — из той же панели',
+      body: 'Подключите собственного Telegram-бота компании и отправляйте подписчикам контент любого типа — отдельный сервис рядом с SMS.',
+      kinds: ['Текст', 'Фото', 'Видео', 'Файлы', 'Посты с кнопками', 'Ссылки'],
+      future: 'Скоро: управление потоком клиентов через бота — автоответы, воронки и сегменты.',
+      cta: 'Подробнее в документации',
+    },
     testimonials: {
       eyebrow: 'Отзывы клиентов',
       title: 'Нам доверяют',
@@ -196,6 +223,14 @@ const dict = {
       body: 'A clean REST API, clear docs, webhooks and official SDKs. Grab a test key and send your first message in 5 minutes.',
       cta: 'Open the docs',
     },
+    telegram: {
+      eyebrow: 'New service',
+      title: 'A Telegram bot — from the same dashboard',
+      body: 'Connect your company’s own Telegram bot and push any kind of content to its subscribers — a standalone service next to SMS.',
+      kinds: ['Text', 'Photos', 'Video', 'Files', 'Posts with buttons', 'Links'],
+      future: 'Coming soon: manage your customer flow through the bot — auto-replies, funnels and segments.',
+      cta: 'More in the docs',
+    },
     testimonials: {
       eyebrow: 'Customer stories',
       title: 'Trusted by teams',
@@ -247,6 +282,32 @@ let simMessageId = 0
 
 function HeroPhone({ appName, dashboardChip }: { appName: string; dashboardChip: string }) {
   const [items, setItems] = useState<SimMessage[]>([])
+  const [hovered, setHovered] = useState(false)
+  const reduceMotion = useReducedMotion()
+
+  // 3D tilt: cursor position over the mock, normalized to [-0.5, 0.5]
+  const mx = useMotionValue(0)
+  const my = useMotionValue(0)
+  const sx = useSpring(mx, { stiffness: 160, damping: 20, mass: 0.6 })
+  const sy = useSpring(my, { stiffness: 160, damping: 20, mass: 0.6 })
+  const rotateY = useTransform(sx, [-0.5, 0.5], [-11, 11])
+  const rotateX = useTransform(sy, [-0.5, 0.5], [9, -9])
+  const glareX = useTransform(sx, [-0.5, 0.5], ['32%', '68%'])
+  const glareY = useTransform(sy, [-0.5, 0.5], ['22%', '58%'])
+  const glare = useMotionTemplate`radial-gradient(340px circle at ${glareX} ${glareY}, rgba(255,255,255,0.14), transparent 62%)`
+
+  const onTiltMove = (event: MouseEvent<HTMLDivElement>) => {
+    if (reduceMotion) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    mx.set((event.clientX - rect.left) / rect.width - 0.5)
+    my.set((event.clientY - rect.top) / rect.height - 0.5)
+  }
+
+  const onTiltLeave = () => {
+    setHovered(false)
+    mx.set(0)
+    my.set(0)
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -273,7 +334,13 @@ function HeroPhone({ appName, dashboardChip }: { appName: string; dashboardChip:
   }, [])
 
   return (
-    <div className="relative mx-auto w-full max-w-md">
+    <div
+      className="relative mx-auto w-full max-w-md"
+      style={{ perspective: '1200px' }}
+      onMouseMove={onTiltMove}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={onTiltLeave}
+    >
       {/* dashboard chip feeding the phone */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
@@ -304,7 +371,14 @@ function HeroPhone({ appName, dashboardChip }: { appName: string; dashboardChip:
         animate={{ opacity: 1, y: 0, rotate: 0 }}
         transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
         className="relative ml-auto w-[270px] sm:w-[290px]"
+        style={{ transformStyle: 'preserve-3d' }}
       >
+        {/* 3D tilt layer: follows the cursor, springs back on leave */}
+        <motion.div
+          style={{ rotateX, rotateY, transformStyle: 'preserve-3d' }}
+          animate={{ scale: hovered && !reduceMotion ? 1.025 : 1 }}
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        >
         {/* titanium frame */}
         <div className="relative rounded-[3rem] bg-gradient-to-b from-zinc-300 via-zinc-400 to-zinc-300 p-[3px] shadow-pop dark:from-zinc-600 dark:via-zinc-700 dark:to-zinc-600">
           {/* action button */}
@@ -382,9 +456,16 @@ function HeroPhone({ appName, dashboardChip }: { appName: string; dashboardChip:
                 {/* home indicator */}
                 <div aria-hidden className="mx-auto mt-2 h-1 w-28 rounded-full bg-ink/25" />
               </div>
+              {/* cursor-following glass glare */}
+              <motion.div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 z-20 rounded-[2.45rem] transition-opacity duration-300"
+                style={{ background: glare, opacity: hovered && !reduceMotion ? 1 : 0 }}
+              />
             </div>
           </div>
         </div>
+        </motion.div>
       </motion.div>
 
       {/* ambient brand glow */}
@@ -414,7 +495,7 @@ export default function HomePage() {
               'radial-gradient(60% 50% at 70% 10%, var(--x-brand-glow), transparent 70%)',
           }}
         />
-        <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 pb-14 pt-10 lg:grid-cols-[1.05fr_0.95fr] lg:pb-16 lg:pt-12">
+        <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl items-center gap-14 px-5 py-10 supports-[height:100svh]:min-h-[calc(100svh-4rem)] lg:grid-cols-[1.05fr_0.95fr] lg:py-12">
           <div>
             <motion.p
               initial={{ opacity: 0, y: 12 }}
@@ -529,6 +610,67 @@ export default function HomePage() {
               </Reveal>
             )
           })}
+        </div>
+      </section>
+
+      {/* TELEGRAM BOT ------------------------------------------------------ */}
+      <section className="border-t border-line bg-surface" id="telegram">
+        <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-20 lg:grid-cols-2">
+          <Reveal className="order-2 lg:order-1">
+            {/* bot chat mockup */}
+            <div className="relative mx-auto w-full max-w-sm">
+              <div className="rounded-2xl border border-line bg-bg p-4 shadow-card">
+                <div className="flex items-center gap-2.5 border-b border-line pb-3">
+                  <span className="flex size-9 items-center justify-center rounded-full bg-brand text-brand-ink">
+                    <Bot className="size-[18px]" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-ink">Samarqand Express</p>
+                    <p className="tnum font-mono text-xs text-ink-3">@samarqand_express_bot</p>
+                  </div>
+                </div>
+                <div className="mt-3 rounded-2xl rounded-tl-md bg-sunken p-3">
+                  <div className="flex h-28 items-center justify-center rounded-xl bg-brand/15 text-brand" aria-hidden>
+                    <Image className="size-6" />
+                  </div>
+                  <p className="mt-2.5 text-[13px] leading-snug text-ink">
+                    Yangi filial ochildi! Chilonzorda endi buyurtmalar 30 daqiqada yetkaziladi 🚀
+                  </p>
+                  <span className="mt-2.5 block rounded-lg border border-brand/40 py-1.5 text-center text-[13px] font-medium text-brand">
+                    Buyurtma berish
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center gap-2 rounded-2xl rounded-tl-md bg-sunken p-3">
+                  <FileText className="size-4 shrink-0 text-brand" />
+                  <span className="tnum font-mono text-[13px] text-ink">narxlar-iyul.pdf</span>
+                </div>
+              </div>
+              <div aria-hidden className="absolute -inset-8 -z-10 rounded-full bg-brand/10 blur-3xl" />
+            </div>
+          </Reveal>
+
+          <Reveal delay={0.15} className="order-1 lg:order-2">
+            <p className="text-[13px] font-semibold uppercase tracking-wider text-brand">{t.telegram.eyebrow}</p>
+            <h2 className="mt-3 font-display text-2xl font-semibold tracking-tight text-ink sm:text-3xl">{t.telegram.title}</h2>
+            <p className="mt-4 max-w-lg text-base leading-relaxed text-ink-2">{t.telegram.body}</p>
+            <div className="mt-6 flex flex-wrap gap-2">
+              {t.telegram.kinds.map((kind) => (
+                <span key={kind} className="rounded-full border border-line bg-bg px-3.5 py-1.5 text-[13px] font-medium text-ink-2">
+                  {kind}
+                </span>
+              ))}
+            </div>
+            <p className="mt-6 flex max-w-lg items-start gap-2.5 text-[13px] leading-relaxed text-ink-3">
+              <Sparkles className="mt-0.5 size-4 shrink-0 text-brand" />
+              {t.telegram.future}
+            </p>
+            <Link to="/docs#telegram" className="mt-7 inline-block">
+              <Button variant="secondary">
+                {t.telegram.cta}
+                <ArrowRight className="size-4" />
+              </Button>
+            </Link>
+          </Reveal>
         </div>
       </section>
 

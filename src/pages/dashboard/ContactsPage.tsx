@@ -8,7 +8,7 @@ import { useAsync } from '@/shared/lib/useAsync'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
 import { formatDate, formatPhone } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/cn'
-import type { Contact, ContactGroup } from '@/shared/mock/types'
+import type { Contact, ContactGroup } from '@/shared/api/types'
 import { Avatar, Button, Card, EmptyState, Input, Modal, PageHeader, Skeleton, useToast } from '@/shared/ui'
 import { createContact, deleteContact, fetchContacts, updateContact, type ContactInput } from '@/features/contacts/api/repository'
 

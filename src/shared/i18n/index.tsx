@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { storageGet, storageSet } from '@/shared/lib/storage'
 
 export type Lang = 'uz' | 'ru' | 'en'
 
@@ -25,15 +26,20 @@ interface I18nContextValue {
 const I18nContext = createContext<I18nContextValue | null>(null)
 
 function readStoredLang(): Lang {
-  const raw = localStorage.getItem(STORAGE_KEY)
+  const raw = storageGet(STORAGE_KEY)
   return raw === 'uz' || raw === 'ru' || raw === 'en' ? raw : 'uz'
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(readStoredLang)
 
+  // Keep <html lang> in sync with the restored preference on first paint too
+  useEffect(() => {
+    document.documentElement.lang = lang
+  }, [lang])
+
   const setLang = useCallback((next: Lang) => {
-    localStorage.setItem(STORAGE_KEY, next)
+    storageSet(STORAGE_KEY, next)
     document.documentElement.lang = next
     setLangState(next)
   }, [])

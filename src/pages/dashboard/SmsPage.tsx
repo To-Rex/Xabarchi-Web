@@ -8,8 +8,8 @@ import { useAsync } from '@/shared/lib/useAsync'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
 import { formatDateTime, formatPhone, formatTime } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/cn'
-import type { MessageStatus, SmsMessage } from '@/shared/mock/types'
-import { Button, Card, EmptyState, Input, MessageStatusBadge, Modal, PageHeader, Skeleton, Tabs } from '@/shared/ui'
+import type { MessageStatus, SmsMessage } from '@/shared/api/types'
+import { Button, Card, EmptyState, Input, MessageStatusBadge, Modal, PageHeader, PriorityBadge, Skeleton, Tabs } from '@/shared/ui'
 import { fetchMessages, getContactName, getDeviceName } from '@/features/sms/api/repository'
 
 const dict = {
@@ -210,7 +210,12 @@ export default function SmsPage() {
                           {name && <p className="font-medium text-ink">{name}</p>}
                           <p className={cn('tnum font-mono text-[13px]', name ? 'text-ink-3' : 'text-ink')}>{formatPhone(message.to)}</p>
                         </td>
-                        <td className="max-w-72 truncate px-3 py-3.5 text-ink-2">{message.text}</td>
+                        <td className="max-w-72 px-3 py-3.5">
+                          <span className="flex items-center gap-2">
+                            <PriorityBadge priority={message.priority} className="shrink-0" />
+                            <span className="truncate text-ink-2">{message.text}</span>
+                          </span>
+                        </td>
                         <td className="whitespace-nowrap px-3 py-3.5 text-ink-2">
                           <span className="inline-flex items-center gap-1.5">
                             <Smartphone className="size-3.5 text-ink-3" />
@@ -243,7 +248,10 @@ export default function SmsPage() {
                       <MessageStatusBadge status={message.status} />
                     </div>
                     <p className="mt-1.5 line-clamp-2 text-[13px] text-ink-2">{message.text}</p>
-                    <p className="tnum mt-1.5 text-xs text-ink-3">{formatDateTime(message.createdAt, lang)}</p>
+                    <p className="mt-1.5 flex items-center justify-between gap-2">
+                      <PriorityBadge priority={message.priority} />
+                      <span className="tnum text-xs text-ink-3">{formatDateTime(message.createdAt, lang)}</span>
+                    </p>
                   </button>
                 )
               })}
@@ -309,8 +317,9 @@ export default function SmsPage() {
               </div>
               <div>
                 <dt className="text-xs font-medium uppercase tracking-wide text-ink-3">{t.cols.status}</dt>
-                <dd className="mt-1">
+                <dd className="mt-1 flex flex-wrap gap-1.5">
                   <MessageStatusBadge status={selected.status} />
+                  <PriorityBadge priority={selected.priority} />
                 </dd>
               </div>
             </dl>

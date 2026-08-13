@@ -1,6 +1,5 @@
-import { simulate } from '@/shared/api/mockClient'
-import { dailyStats, devices, messages } from '@/shared/mock/db'
-import type { DailyStat, Device, SmsMessage } from '@/shared/mock/types'
+import { api } from '@/shared/api/client'
+import type { DailyStat, Device, SmsMessage } from '@/shared/api/types'
 
 export interface OverviewData {
   sentToday: number
@@ -17,23 +16,9 @@ export interface OverviewData {
 }
 
 export function fetchOverview(): Promise<OverviewData> {
-  return simulate(() => {
-    const last = dailyStats[dailyStats.length - 1]
-    const prev = dailyStats[dailyStats.length - 2]
-    const delivered = dailyStats.reduce((sum, day) => sum + day.delivered, 0)
-    const sent = dailyStats.reduce((sum, day) => sum + day.sent, 0)
-    return {
-      sentToday: devices.reduce((sum, device) => sum + device.sentToday, 0),
-      sentYesterday: prev?.sent ?? last.sent,
-      deliveryRate: (delivered / sent) * 100,
-      activeDevices: devices.filter((device) => device.status === 'online').length,
-      totalDevices: devices.length,
-      queued: messages.filter((message) => message.status === 'queued' || message.status === 'sending').length,
-      monthlyUsed: 8000,
-      monthlyLimit: 10000,
-      series: dailyStats,
-      recentMessages: messages.slice(0, 6),
-      devices,
-    }
-  })
+  return api<OverviewData>('/analytics/overview')
+}
+
+export function fetchDailyStats(days = 14): Promise<DailyStat[]> {
+  return api<DailyStat[]>('/analytics/daily', { query: { days } })
 }

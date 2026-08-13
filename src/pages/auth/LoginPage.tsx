@@ -4,9 +4,10 @@ import { motion } from 'motion/react'
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
 import { useT } from '@/shared/i18n'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
-import { delay } from '@/shared/api/mockClient'
+import { ApiError } from '@/shared/api/client'
 import { Button, Input } from '@/shared/ui'
-import { signIn } from '@/features/auth/model/authStore'
+import { login } from '@/features/auth/model/authStore'
+import { SocialAuth } from './SocialAuth'
 
 const dict = {
   uz: {
@@ -19,11 +20,11 @@ const dict = {
     submit: 'Kirish',
     noAccount: 'Hisobingiz yo‘qmi?',
     register: "Ro'yxatdan o'tish",
-    demoHint: 'Demo: istalgan email va kamida 6 belgili parol bilan kiring.',
     errors: {
       email: 'To‘g‘ri email kiriting',
-      password: 'Parol kamida 6 belgi bo‘lsin',
-      credentials: 'Email yoki parol noto‘g‘ri. Demo uchun istalgan email va 6+ belgili parol yetarli.',
+      password: 'Parol kamida 8 belgi bo‘lsin',
+      credentials: 'Email yoki parol noto‘g‘ri.',
+      network: 'Server bilan bog‘lanib bo‘lmadi. Qayta urinib ko‘ring.',
     },
     showPassword: 'Parolni ko‘rsatish',
   },
@@ -37,11 +38,11 @@ const dict = {
     submit: 'Войти',
     noAccount: 'Нет аккаунта?',
     register: 'Зарегистрироваться',
-    demoHint: 'Демо: войдите с любым email и паролем от 6 символов.',
     errors: {
       email: 'Введите корректный email',
-      password: 'Пароль — минимум 6 символов',
-      credentials: 'Неверный email или пароль. Для демо подойдёт любой email и пароль от 6 символов.',
+      password: 'Пароль — минимум 8 символов',
+      credentials: 'Неверный email или пароль.',
+      network: 'Не удалось связаться с сервером. Попробуйте ещё раз.',
     },
     showPassword: 'Показать пароль',
   },
@@ -55,11 +56,11 @@ const dict = {
     submit: 'Sign in',
     noAccount: 'No account yet?',
     register: 'Create one',
-    demoHint: 'Demo: sign in with any email and a password of 6+ characters.',
     errors: {
       email: 'Enter a valid email',
-      password: 'Password must be at least 6 characters',
-      credentials: 'Wrong email or password. For the demo, any email and a 6+ character password works.',
+      password: 'Password must be at least 8 characters',
+      credentials: 'Wrong email or password.',
+      network: 'Could not reach the server. Please try again.',
     },
     showPassword: 'Show password',
   },
@@ -82,15 +83,21 @@ export default function LoginPage() {
     event.preventDefault()
     const next: typeof errors = {}
     if (!EMAIL_RE.test(email)) next.email = t.errors.email
-    if (password.length < 6) next.password = t.errors.password
+    if (password.length < 8) next.password = t.errors.password
     setErrors(next)
     if (Object.keys(next).length > 0) return
 
     setLoading(true)
-    await delay(900)
-    signIn()
-    const from = (location.state as { from?: string } | null)?.from
-    navigate(from ?? '/app', { replace: true })
+    try {
+      await login(email, password)
+      const from = (location.state as { from?: string } | null)?.from
+      navigate(from ?? '/app', { replace: true })
+    } catch (error) {
+      setErrors({
+        form: error instanceof ApiError && error.status === 401 ? t.errors.credentials : t.errors.network,
+      })
+      setLoading(false)
+    }
   }
 
   return (
@@ -129,12 +136,13 @@ export default function LoginPage() {
             {t.forgot}
           </Link>
         </div>
+        {errors.form && <p className="text-[13px] font-medium text-danger">{errors.form}</p>}
         <Button type="submit" loading={loading} className="w-full" size="lg">
           {t.submit}
         </Button>
       </form>
 
-      <p className="mt-6 rounded-xl bg-brand-soft px-4 py-3 text-[13px] leading-relaxed text-brand-2 dark:text-brand">{t.demoHint}</p>
+      <SocialAuth />
 
       <p className="mt-6 text-center text-sm text-ink-2">
         {t.noAccount}{' '}

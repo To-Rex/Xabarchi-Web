@@ -5,6 +5,7 @@ import {
   BarChart3,
   Bell,
   BookOpen,
+  Bot,
   CreditCard,
   LayoutDashboard,
   LifeBuoy,
@@ -21,9 +22,8 @@ import {
 import { useLang, useT } from '@/shared/i18n'
 import { formatRelative } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/cn'
-import { user } from '@/shared/mock/db'
 import { Avatar, Dropdown, DropdownItem, DropdownSeparator, LangSwitcher, Logo, LogoMark, ProgressBar, ThemeToggle } from '@/shared/ui'
-import { signOut } from '@/features/auth/model/authStore'
+import { signOut, useCurrentUser } from '@/features/auth/model/authStore'
 import { markRead, useNotifications, useUnreadCount } from '@/features/notifications/model/store'
 
 const dict = {
@@ -31,6 +31,7 @@ const dict = {
     nav: {
       overview: 'Boshqaruv paneli',
       sms: 'SMS xabarlar',
+      telegram: 'Telegram bot',
       devices: 'Qurilmalar',
       contacts: 'Kontaktlar',
       templates: 'Shablonlar',
@@ -53,6 +54,7 @@ const dict = {
     nav: {
       overview: 'Панель управления',
       sms: 'SMS сообщения',
+      telegram: 'Telegram-бот',
       devices: 'Устройства',
       contacts: 'Контакты',
       templates: 'Шаблоны',
@@ -75,6 +77,7 @@ const dict = {
     nav: {
       overview: 'Dashboard',
       sms: 'SMS messages',
+      telegram: 'Telegram bot',
       devices: 'Devices',
       contacts: 'Contacts',
       templates: 'Templates',
@@ -151,6 +154,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <div className="space-y-0.5">
             <NavItem to="/app" end icon={<LayoutDashboard />} label={t.nav.overview} onClick={onNavigate} />
             <NavItem to="/app/sms" icon={<MessageSquareText />} label={t.nav.sms} onClick={onNavigate} />
+            <NavItem to="/app/telegram" icon={<Bot />} label={t.nav.telegram} onClick={onNavigate} />
             <NavItem to="/app/devices" icon={<Smartphone />} label={t.nav.devices} onClick={onNavigate} />
             <NavItem to="/app/contacts" icon={<Users />} label={t.nav.contacts} onClick={onNavigate} />
             <NavItem to="/app/templates" icon={<FileText />} label={t.nav.templates} onClick={onNavigate} />
@@ -268,6 +272,7 @@ export function DashboardLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
+  const user = useCurrentUser()
 
   useEffect(() => {
     setDrawerOpen(false)
@@ -327,15 +332,15 @@ export function DashboardLayout() {
             width="w-52"
             trigger={(open) => (
               <span className={cn('block rounded-full ring-2 ring-transparent transition-all', open && 'ring-brand')}>
-                <Avatar name={`${user.firstName} ${user.lastName}`} hue={user.avatarHue} size="sm" />
+                <Avatar name={user ? `${user.firstName} ${user.lastName}` : '·'} hue={user?.avatarHue ?? 172} size="sm" />
               </span>
             )}
           >
             {(close) => (
               <>
                 <div className="px-3 py-2">
-                  <p className="text-[13px] font-semibold text-ink">{user.firstName} {user.lastName}</p>
-                  <p className="truncate text-xs text-ink-3">{user.email}</p>
+                  <p className="text-[13px] font-semibold text-ink">{user ? `${user.firstName} ${user.lastName}` : '…'}</p>
+                  <p className="truncate text-xs text-ink-3">{user?.email}</p>
                 </div>
                 <DropdownSeparator />
                 <DropdownItem icon={<UserRound />} onClick={() => { close(); navigate('/app/profile') }}>

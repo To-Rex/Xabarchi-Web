@@ -7,9 +7,10 @@ import { commonDict } from '@/shared/i18n/common'
 import { useAsync } from '@/shared/lib/useAsync'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
 import { formatDate, formatRelative } from '@/shared/lib/format'
-import { simulate } from '@/shared/api/mockClient'
-import { apiKeys as seedKeys } from '@/shared/mock/db'
-import type { ApiKey } from '@/shared/mock/types'
+import { storageGet, storageSet } from '@/shared/lib/storage'
+import type { ApiKey } from '@/shared/api/types'
+import { ApiError } from '@/shared/api/client'
+import { createApiKey, fetchApiKeys, revokeApiKey } from '@/features/apikeys/api/repository'
 import { cn } from '@/shared/lib/cn'
 import { Badge, Button, Card, CardBody, CardHeader, CardTitle, CodeBlock, EmptyState, Input, Modal, PageHeader, Skeleton, useToast } from '@/shared/ui'
 
@@ -97,17 +98,9 @@ const dict = {
   },
 }
 
-const ALL_SCOPES: ApiKey['scopes'][number][] = ['sms.send', 'sms.read', 'devices.read', 'contacts.read']
+const ALL_SCOPES: ApiKey['scopes'][number][] = ['sms.send', 'sms.read', 'devices.read', 'contacts.read', 'telegram.send', 'telegram.read']
 
-let keyStore: ApiKey[] = [...seedKeys]
-let keyCounter = 0
-
-const fetchKeys = () => simulate(() => [...keyStore])
-
-function randomToken(length: number) {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'
-  return Array.from({ length }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('')
-}
+const WEBHOOK_KEY = 'xabarchi:webhook-url'
 
 export default function ApiPage() {
   const t = useT(dict)
@@ -117,7 +110,7 @@ export default function ApiPage() {
   const toast = useToast()
 
   const [version, setVersion] = useState(0)
-  const { data, loading, error, refetch } = useAsync(fetchKeys, [version])
+  const { data, loading, error, refetch } = useAsync(fetchApiKeys, [version])
 
   const [createOpen, setCreateOpen] = useState(false)
   const [keyName, setKeyName] = useState('')
@@ -127,7 +120,7 @@ export default function ApiPage() {
   const [secret, setSecret] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [revoking, setRevoking] = useState<ApiKey | null>(null)
-  const [webhookUrl, setWebhookUrl] = useState('https://samarqand.express/webhooks/xabarchi')
+  const [webhookUrl, setWebhookUrl] = useState(() => storageGet(WEBHOOK_KEY) ?? '')
   const [webhookBusy, setWebhookBusy] = useState(false)
 
   const createKey = async () => {
@@ -136,38 +129,34 @@ export default function ApiPage() {
       return
     }
     setBusy(true)
-    const token = `xab_live_${randomToken(4)}${randomToken(28)}`
-    await simulate(() => {
-      keyStore = [
-        {
-          id: `key_new_${++keyCounter}`,
-          name: keyName.trim(),
-          prefix: token.slice(0, 13),
-          createdAt: new Date().toISOString(),
-          scopes: [...scopes] as ApiKey['scopes'],
-        },
-        ...keyStore,
-      ]
-    })
-    setBusy(false)
-    setCreateOpen(false)
-    setSecret(token)
-    setKeyName('')
-    setScopes(new Set(['sms.send']))
-    setVersion((v) => v + 1)
-    toast('success', t.createdToast)
+    try {
+      const created = await createApiKey(keyName.trim(), [...scopes] as ApiKey['scopes'])
+      setCreateOpen(false)
+      setSecret(created.key)
+      setKeyName('')
+      setScopes(new Set(['sms.send']))
+      setVersion((v) => v + 1)
+      toast('success', t.createdToast)
+    } catch (err) {
+      toast('error', err instanceof ApiError ? err.message : c.errorTitle)
+    } finally {
+      setBusy(false)
+    }
   }
 
   const confirmRevoke = async () => {
     if (!revoking) return
     setBusy(true)
-    await simulate(() => {
-      keyStore = keyStore.filter((key) => key.id !== revoking.id)
-    })
-    setBusy(false)
-    setRevoking(null)
-    setVersion((v) => v + 1)
-    toast('info', t.revokedToast)
+    try {
+      await revokeApiKey(revoking.id)
+      setRevoking(null)
+      setVersion((v) => v + 1)
+      toast('info', t.revokedToast)
+    } catch (err) {
+      toast('error', err instanceof ApiError ? err.message : c.errorTitle)
+    } finally {
+      setBusy(false)
+    }
   }
 
   const copySecret = async () => {
@@ -179,9 +168,9 @@ export default function ApiPage() {
     } catch { /* ignore */ }
   }
 
-  const saveWebhook = async () => {
+  const saveWebhook = () => {
     setWebhookBusy(true)
-    await simulate(() => undefined, { minDelay: 400, maxDelay: 700 })
+    storageSet(WEBHOOK_KEY, webhookUrl.trim())
     setWebhookBusy(false)
     toast('success', t.webhook.savedToast)
   }

@@ -7,7 +7,7 @@ import { commonDict } from '@/shared/i18n/common'
 import { useAsync } from '@/shared/lib/useAsync'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
 import { formatDate, formatNumber, smsSegments } from '@/shared/lib/format'
-import type { Template } from '@/shared/mock/types'
+import type { Template } from '@/shared/api/types'
 import { Badge, Button, Card, EmptyState, Input, Modal, PageHeader, Skeleton, Textarea, useToast } from '@/shared/ui'
 import { createTemplate, deleteTemplate, extractVariables, fetchTemplates, updateTemplate } from '@/features/templates/api/repository'
 

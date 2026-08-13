@@ -86,101 +86,147 @@ export function MarketingLayout() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header
-        className={cn(
-          'fixed inset-x-0 top-0 z-40 transition-all duration-300',
-          scrolled ? 'border-b border-line bg-bg/85 backdrop-blur-xl' : 'bg-transparent',
-        )}
-      >
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5">
-          <Link to="/" aria-label="Xabarchi">
-            <Logo />
-          </Link>
-
-          <nav className="hidden items-center gap-1 md:flex" aria-label="Asosiy">
-            {links.map((link) =>
-              link.hash ? (
-                <a
-                  key={link.to}
-                  href={link.to}
-                  className="rounded-lg px-3 py-2 text-sm font-medium text-ink-2 transition-colors hover:text-ink"
-                >
-                  {link.label}
-                </a>
-              ) : (
-                <NavLink
-                  key={link.to}
-                  to={link.to}
-                  className={({ isActive }) =>
-                    cn(
-                      'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                      isActive ? 'text-brand' : 'text-ink-2 hover:text-ink',
-                    )
-                  }
-                >
-                  {link.label}
-                </NavLink>
-              ),
+      <header className="fixed inset-x-0 top-0 z-40">
+        {/* Floating island: transparent and merged with the hero at rest,
+            condenses into a centered glass pill once the page scrolls. */}
+        <div
+          className={cn(
+            'mx-auto transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]',
+            scrolled ? 'mt-2.5 max-w-5xl px-3 sm:mt-3 sm:px-4' : 'max-w-6xl px-0',
+          )}
+        >
+          <div
+            className={cn(
+              'relative flex items-center justify-between gap-4 px-5 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]',
+              scrolled
+                ? 'h-14 rounded-2xl border border-line/70 bg-bg/70 shadow-pop backdrop-blur-xl'
+                : 'h-16 rounded-2xl border border-transparent bg-transparent',
             )}
-          </nav>
+          >
+            {/* hairline sheen on the glass top edge */}
+            <span
+              aria-hidden
+              className={cn(
+                'pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-brand/50 to-transparent transition-opacity duration-500',
+                scrolled ? 'opacity-100' : 'opacity-0',
+              )}
+            />
+            <Link to="/" aria-label="Xabarchi">
+              <Logo />
+            </Link>
 
-          <div className="hidden items-center gap-2 md:flex">
-            <LangSwitcher compact />
-            <ThemeToggle />
-            <Link to="/login" className="rounded-lg px-3 py-2 text-sm font-medium text-ink-2 transition-colors hover:text-ink">
-              {t.login}
-            </Link>
-            <Link to="/register">
-              <Button size="sm">{t.cta}</Button>
-            </Link>
+            <nav className="hidden items-center gap-1 md:flex" aria-label="Asosiy">
+              {links.map((link) =>
+                link.hash ? (
+                  <a
+                    key={link.to}
+                    href={link.to}
+                    className="whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium text-ink-2 transition-colors hover:text-ink"
+                  >
+                    {link.label}
+                  </a>
+                ) : (
+                  <NavLink key={link.to} to={link.to} className="group relative whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium">
+                    {({ isActive }) => (
+                      <>
+                        {isActive && (
+                          <motion.span
+                            layoutId="nav-active-pill"
+                            className="absolute inset-0 rounded-full bg-brand-soft"
+                            transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                          />
+                        )}
+                        <span
+                          className={cn(
+                            'relative z-10 transition-colors',
+                            isActive ? 'text-brand-2 dark:text-brand' : 'text-ink-2 group-hover:text-ink',
+                          )}
+                        >
+                          {link.label}
+                        </span>
+                      </>
+                    )}
+                  </NavLink>
+                ),
+              )}
+            </nav>
+
+            <div className="hidden items-center gap-2 md:flex">
+              <LangSwitcher compact />
+              <ThemeToggle />
+              <span aria-hidden className="mx-1 h-5 w-px bg-line" />
+              <Link to="/login" className="whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium text-ink-2 transition-colors hover:text-ink">
+                {t.login}
+              </Link>
+              <Link to="/register">
+                <Button size="sm" className="whitespace-nowrap">{t.cta}</Button>
+              </Link>
+            </div>
+
+            <button
+              className="rounded-lg p-2 text-ink md:hidden"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label="Menu"
+              aria-expanded={menuOpen}
+            >
+              {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+            </button>
           </div>
 
-          <button
-            className="rounded-lg p-2 text-ink md:hidden"
-            onClick={() => setMenuOpen((v) => !v)}
-            aria-label="Menu"
-            aria-expanded={menuOpen}
-          >
-            {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
-          </button>
-        </div>
-
-        <AnimatePresence>
-          {menuOpen && (
-            <motion.nav
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className="overflow-hidden border-b border-line bg-bg/95 backdrop-blur-xl md:hidden"
-            >
-              <div className="flex flex-col gap-1 px-5 pb-5 pt-2">
-                {links.map((link) =>
-                  link.hash ? (
-                    <a key={link.to} href={link.to} onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-[15px] font-medium text-ink-2">
-                      {link.label}
-                    </a>
-                  ) : (
-                    <NavLink key={link.to} to={link.to} className="rounded-lg px-3 py-2.5 text-[15px] font-medium text-ink-2">
-                      {link.label}
-                    </NavLink>
-                  ),
+          <AnimatePresence>
+            {menuOpen && (
+              <motion.nav
+                initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.98 }}
+                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                className={cn(
+                  'mt-2 origin-top overflow-hidden rounded-2xl border border-line bg-bg/90 shadow-pop backdrop-blur-xl md:hidden',
+                  !scrolled && 'mx-3',
                 )}
-                <div className="mt-3 flex items-center gap-2">
-                  <LangSwitcher compact />
-                  <ThemeToggle />
-                  <div className="flex-1" />
-                  <Link to="/login" className="px-3 py-2 text-sm font-medium text-ink-2">
-                    {t.login}
-                  </Link>
-                  <Link to="/register">
-                    <Button size="sm">{t.cta}</Button>
-                  </Link>
+              >
+                <div className="flex flex-col gap-1 p-3">
+                  {links.map((link) =>
+                    link.hash ? (
+                      <a
+                        key={link.to}
+                        href={link.to}
+                        onClick={() => setMenuOpen(false)}
+                        className="rounded-xl px-3.5 py-2.5 text-[15px] font-medium text-ink-2 transition-colors hover:bg-sunken hover:text-ink"
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <NavLink
+                        key={link.to}
+                        to={link.to}
+                        className={({ isActive }) =>
+                          cn(
+                            'rounded-xl px-3.5 py-2.5 text-[15px] font-medium transition-colors',
+                            isActive ? 'bg-brand-soft text-brand-2 dark:text-brand' : 'text-ink-2 hover:bg-sunken hover:text-ink',
+                          )
+                        }
+                      >
+                        {link.label}
+                      </NavLink>
+                    ),
+                  )}
+                  <div className="mt-2 flex items-center gap-2 border-t border-line px-1 pt-3">
+                    <LangSwitcher compact />
+                    <ThemeToggle />
+                    <div className="flex-1" />
+                    <Link to="/login" className="px-3 py-2 text-sm font-medium text-ink-2">
+                      {t.login}
+                    </Link>
+                    <Link to="/register">
+                      <Button size="sm">{t.cta}</Button>
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            </motion.nav>
-          )}
-        </AnimatePresence>
+              </motion.nav>
+            )}
+          </AnimatePresence>
+        </div>
       </header>
 
       <main className="flex-1 pt-16">
@@ -222,8 +268,8 @@ export function MarketingLayout() {
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-5 text-[13px] text-ink-3">
             <span>{t.footer.legal}</span>
             <span className="flex gap-5">
-              <a href="#" className="transition-colors hover:text-ink-2">{t.footer.terms}</a>
-              <a href="#" className="transition-colors hover:text-ink-2">{t.footer.privacy}</a>
+              <Link to="/terms" className="transition-colors hover:text-ink-2">{t.footer.terms}</Link>
+              <Link to="/privacy" className="transition-colors hover:text-ink-2">{t.footer.privacy}</Link>
             </span>
           </div>
         </div>

@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
+import QRCode from 'qrcode'
 import { BatteryFull, BatteryLow, BatteryMedium, CheckCircle2, MoreVertical, Plus, Smartphone, Star, Trash2 } from 'lucide-react'
 import { useLang, useT } from '@/shared/i18n'
 import { commonDict } from '@/shared/i18n/common'
@@ -7,9 +8,10 @@ import { useAsync } from '@/shared/lib/useAsync'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
 import { formatNumber, formatPhone, formatRelative } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/cn'
-import type { Device } from '@/shared/mock/types'
-import { Badge, Button, Card, Dropdown, DropdownItem, EmptyState, Modal, PageHeader, ProgressBar, Skeleton, useToast } from '@/shared/ui'
-import { fetchDevices, pairNewDevice, removeDevice, setDefaultDevice } from '@/features/devices/api/repository'
+import type { Device } from '@/shared/api/types'
+import { Badge, Button, Card, Dropdown, DropdownItem, EmptyState, Modal, PageHeader, ProgressBar, Skeleton, Spinner, useToast } from '@/shared/ui'
+import { fetchDevices, removeDevice, setDefaultDevice, startPairing } from '@/features/devices/api/repository'
+import { onRealtimeEvent } from '@/features/realtime/socket'
 
 const dict = {
   uz: {
@@ -32,6 +34,8 @@ const dict = {
       step1: 'Android telefoningizda Xabarchi ilovasini oching',
       step2: '«Qurilma ulash» bo‘limida QR skannerini tanlang',
       step3: 'Quyidagi kodni skanerlang',
+      codeLabel: 'Ulanish kodi',
+      expires: (s: number) => `Kod ${s} soniyadan keyin yangilanadi`,
       waiting: 'Ulanish kutilmoqda…',
       found: 'Qurilma topildi!',
       connected: (name: string) => `${name} muvaffaqiyatli ulandi`,
@@ -61,6 +65,8 @@ const dict = {
       step1: 'Откройте приложение Xabarchi на Android-телефоне',
       step2: 'В разделе «Подключить устройство» выберите QR-сканер',
       step3: 'Отсканируйте код ниже',
+      codeLabel: 'Код подключения',
+      expires: (s: number) => `Код обновится через ${s} сек`,
       waiting: 'Ожидание подключения…',
       found: 'Устройство найдено!',
       connected: (name: string) => `${name} успешно подключено`,
@@ -121,30 +127,6 @@ function BatteryIcon({ level }: { level: number }) {
   return <BatteryFull className="size-4 text-ok" />
 }
 
-/** Decorative deterministic QR-ish pattern. */
-function FakeQr() {
-  const cells: boolean[] = []
-  let seed = 12345
-  for (let i = 0; i < 441; i++) {
-    seed = (seed * 1103515245 + 12345) & 0x7fffffff
-    cells.push(seed % 100 < 46)
-  }
-  return (
-    <svg viewBox="0 0 21 21" className="size-44 rounded-lg bg-white p-1.5" aria-hidden>
-      {cells.map((on, index) =>
-        on ? <rect key={index} x={index % 21} y={Math.floor(index / 21)} width="1" height="1" fill="#10222B" /> : null,
-      )}
-      {[[0, 0], [14, 0], [0, 14]].map(([x, y]) => (
-        <g key={`${x}-${y}`}>
-          <rect x={x} y={y} width="7" height="7" fill="#10222B" />
-          <rect x={x + 1} y={y + 1} width="5" height="5" fill="#fff" />
-          <rect x={x + 2} y={y + 2} width="3" height="3" fill="#0E9488" />
-        </g>
-      ))}
-    </svg>
-  )
-}
-
 export default function DevicesPage() {
   const t = useT(dict)
   const c = useT(commonDict)
@@ -156,49 +138,93 @@ export default function DevicesPage() {
   const [devices, setDevices] = useState<Device[] | null>(null)
   const [qrOpen, setQrOpen] = useState(false)
   const [qrStage, setQrStage] = useState<'waiting' | 'found'>('waiting')
+  const [qrImage, setQrImage] = useState<string | null>(null)
   const [pairedName, setPairedName] = useState('')
   const [removing, setRemoving] = useState<Device | null>(null)
   const [busy, setBusy] = useState(false)
-  const qrTimer = useRef<ReturnType<typeof setTimeout>>(null)
 
   const list = devices ?? data
 
-  // Mock pairing: a phone "scans" the QR a few seconds after the modal opens
+  // Real QR pairing: mint a short-lived code, render it, renew on expiry,
+  // and wait for the phone's `device.paired` event over the WebSocket.
   useEffect(() => {
     if (!qrOpen) {
       setQrStage('waiting')
-      if (qrTimer.current) clearTimeout(qrTimer.current)
+      setQrImage(null)
       return
     }
-    qrTimer.current = setTimeout(async () => {
-      const device = await pairNewDevice()
-      setPairedName(device.model)
+    let cancelled = false
+    let doneTimer: ReturnType<typeof setTimeout> | null = null
+
+    const requestCode = async () => {
+      try {
+        const pair = await startPairing()
+        if (cancelled) return null
+        const image = await QRCode.toDataURL(pair.qrPayload, { margin: 1, width: 352 })
+        if (cancelled) return null
+        setQrImage(image)
+        return pair.expiresIn
+      } catch {
+        if (!cancelled) {
+          setQrOpen(false)
+          toast('error', c.errorTitle)
+        }
+        return null
+      }
+    }
+
+    let renewTimer: ReturnType<typeof setTimeout> | null = null
+    const cycle = async () => {
+      const expiresIn = await requestCode()
+      // Renew a little before the code dies so the QR never goes stale.
+      if (expiresIn && !cancelled) renewTimer = setTimeout(cycle, Math.max(10, expiresIn - 10) * 1000)
+    }
+    void cycle()
+
+    const unsubscribe = onRealtimeEvent((event) => {
+      if (event.event !== 'device.paired') return
+      const device = event.data as unknown as Device
+      setPairedName(device.name)
       setQrStage('found')
-      qrTimer.current = setTimeout(async () => {
+      doneTimer = setTimeout(async () => {
         setDevices(await fetchDevices())
         setQrOpen(false)
-        toast('success', t.pairedToast, t.qr.connected(device.model))
+        toast('success', t.pairedToast, t.qr.connected(device.name))
       }, 1600)
-    }, 4500)
+    })
+
     return () => {
-      if (qrTimer.current) clearTimeout(qrTimer.current)
+      cancelled = true
+      if (renewTimer) clearTimeout(renewTimer)
+      if (doneTimer) clearTimeout(doneTimer)
+      unsubscribe()
     }
   }, [qrOpen]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const makeDefault = async (device: Device) => {
     setBusy(true)
-    setDevices(await setDefaultDevice(device.id))
-    setBusy(false)
-    toast('success', t.defaultToast, device.name)
+    try {
+      setDevices(await setDefaultDevice(device.id))
+      toast('success', t.defaultToast, device.name)
+    } catch {
+      toast('error', c.errorTitle)
+    } finally {
+      setBusy(false)
+    }
   }
 
   const confirmRemove = async () => {
     if (!removing) return
     setBusy(true)
-    setDevices(await removeDevice(removing.id))
-    setBusy(false)
-    setRemoving(null)
-    toast('info', t.removedToast)
+    try {
+      setDevices(await removeDevice(removing.id))
+      setRemoving(null)
+      toast('info', t.removedToast)
+    } catch {
+      toast('error', c.errorTitle)
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -293,9 +319,13 @@ export default function DevicesPage() {
                     </div>
 
                     <div className="space-y-3.5 p-5">
-                      <div className="flex items-center justify-between text-[13px]">
+                      <div className="flex items-center justify-between gap-2 text-[13px]">
                         <span className="tnum font-mono text-ink-2">{formatPhone(device.phone)}</span>
-                        <Badge tone={online ? 'ok' : 'neutral'}>{online ? c.online : c.offline}</Badge>
+                        <span className="flex flex-wrap justify-end gap-1.5">
+                          {device.connection === 'realtime' && <Badge tone="brand">Realtime</Badge>}
+                          {device.connection === 'polling' && <Badge tone="gold">Polling</Badge>}
+                          <Badge tone={online ? 'ok' : 'neutral'}>{online ? c.online : c.offline}</Badge>
+                        </span>
                       </div>
 
                       <div className="grid grid-cols-3 gap-2 rounded-xl border border-line p-3">
@@ -327,7 +357,7 @@ export default function DevicesPage() {
                       </div>
 
                       <p className="text-xs text-ink-3">
-                        {t.lastSeen}: <span className="tnum">{formatRelative(device.lastSeenAt, lang)}</span>
+                        {t.lastSeen}: <span className="tnum">{device.lastSeenAt ? formatRelative(device.lastSeenAt, lang) : '—'}</span>
                       </p>
                     </div>
                   </Card>
@@ -353,7 +383,13 @@ export default function DevicesPage() {
             <AnimatePresence mode="wait">
               {qrStage === 'waiting' ? (
                 <motion.div key="qr" initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="relative overflow-hidden rounded-xl border border-line">
-                  <FakeQr />
+                  {qrImage ? (
+                    <img src={qrImage} alt="QR" className="size-44 rounded-lg bg-white p-1.5" />
+                  ) : (
+                    <div className="flex size-44 items-center justify-center rounded-lg bg-white">
+                      <Spinner className="size-6" />
+                    </div>
+                  )}
                   {/* scanline */}
                   <motion.span
                     aria-hidden

@@ -5,19 +5,26 @@ import { useIsAuthenticated } from '@/features/auth/model/authStore'
 import { MarketingLayout } from './layouts/MarketingLayout'
 import { AuthLayout } from './layouts/AuthLayout'
 import { DashboardLayout } from './layouts/DashboardLayout'
+import { RouteError } from './RouteError'
 
 const HomePage = lazy(() => import('@/pages/marketing/HomePage'))
 const PricingPage = lazy(() => import('@/pages/marketing/PricingPage'))
 const FaqPage = lazy(() => import('@/pages/marketing/FaqPage'))
 const DocsPage = lazy(() => import('@/pages/marketing/DocsPage'))
 const ContactPage = lazy(() => import('@/pages/marketing/ContactPage'))
+const TermsPage = lazy(() => import('@/pages/marketing/TermsPage'))
+const PrivacyPage = lazy(() => import('@/pages/marketing/PrivacyPage'))
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
 const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage'))
 const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage'))
+const VerifyEmailPage = lazy(() => import('@/pages/auth/VerifyEmailPage'))
+const AuthCallbackPage = lazy(() => import('@/pages/auth/AuthCallbackPage'))
 
 const OverviewPage = lazy(() => import('@/pages/dashboard/OverviewPage'))
 const SmsPage = lazy(() => import('@/pages/dashboard/SmsPage'))
+const TelegramPage = lazy(() => import('@/pages/dashboard/TelegramPage'))
 const ComposePage = lazy(() => import('@/pages/dashboard/ComposePage'))
 const DevicesPage = lazy(() => import('@/pages/dashboard/DevicesPage'))
 const ContactsPage = lazy(() => import('@/pages/dashboard/ContactsPage'))
@@ -53,20 +60,27 @@ function RequireAuth({ children }: { children: ReactNode }) {
 export const router = createBrowserRouter([
   {
     element: <MarketingLayout />,
+    errorElement: <RouteError />,
     children: [
       { path: '/', element: <Boundary><HomePage /></Boundary> },
       { path: '/pricing', element: <Boundary><PricingPage /></Boundary> },
       { path: '/faq', element: <Boundary><FaqPage /></Boundary> },
       { path: '/docs', element: <Boundary><DocsPage /></Boundary> },
       { path: '/contact', element: <Boundary><ContactPage /></Boundary> },
+      { path: '/terms', element: <Boundary><TermsPage /></Boundary> },
+      { path: '/privacy', element: <Boundary><PrivacyPage /></Boundary> },
     ],
   },
   {
     element: <AuthLayout />,
+    errorElement: <RouteError />,
     children: [
       { path: '/login', element: <Boundary><LoginPage /></Boundary> },
       { path: '/register', element: <Boundary><RegisterPage /></Boundary> },
       { path: '/forgot-password', element: <Boundary><ForgotPasswordPage /></Boundary> },
+      { path: '/reset-password', element: <Boundary><ResetPasswordPage /></Boundary> },
+      { path: '/verify-email', element: <Boundary><VerifyEmailPage /></Boundary> },
+      { path: '/auth/callback', element: <Boundary><AuthCallbackPage /></Boundary> },
     ],
   },
   {
@@ -76,10 +90,12 @@ export const router = createBrowserRouter([
         <DashboardLayout />
       </RequireAuth>
     ),
+    errorElement: <RouteError />,
     children: [
       { index: true, element: <Boundary><OverviewPage /></Boundary> },
       { path: 'sms', element: <Boundary><SmsPage /></Boundary> },
       { path: 'sms/new', element: <Boundary><ComposePage /></Boundary> },
+      { path: 'telegram', element: <Boundary><TelegramPage /></Boundary> },
       { path: 'devices', element: <Boundary><DevicesPage /></Boundary> },
       { path: 'contacts', element: <Boundary><ContactsPage /></Boundary> },
       { path: 'templates', element: <Boundary><TemplatesPage /></Boundary> },
@@ -92,5 +108,5 @@ export const router = createBrowserRouter([
       { path: 'help', element: <Boundary><HelpPage /></Boundary> },
     ],
   },
-  { path: '*', element: <Boundary><NotFoundPage /></Boundary> },
+  { path: '*', element: <Boundary><NotFoundPage /></Boundary>, errorElement: <RouteError /> },
 ])

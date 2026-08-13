@@ -7,8 +7,10 @@ import { commonDict } from '@/shared/i18n/common'
 import { useAsync } from '@/shared/lib/useAsync'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
 import { formatDate, formatDayMonth, formatNumber } from '@/shared/lib/format'
-import { simulate } from '@/shared/api/mockClient'
-import { dailyStats, devices, hourlyLoad } from '@/shared/mock/db'
+import { api } from '@/shared/api/client'
+import type { DailyStat, SmsMessage } from '@/shared/api/types'
+import { fetchDailyStats } from '@/features/dashboard/api/repository'
+import { fetchDevices } from '@/features/devices/api/repository'
 import { AnimatedNumber, Button, Card, CardBody, CardHeader, CardTitle, EmptyState, PageHeader, SegmentedControl, Skeleton } from '@/shared/ui'
 import { useChartPalette } from '@/shared/charts/tokens'
 import { ChartTooltipCard } from '@/shared/charts/ChartTooltip'
@@ -24,7 +26,7 @@ const dict = {
     legendDelivered: 'Yetkazildi',
     legendFailed: 'Xato',
     hourChart: 'Soat bo‘yicha yuklama',
-    hourHint: 'O‘rtacha, so‘nggi 30 kun',
+    hourHint: 'So‘nggi 100 xabar bo‘yicha',
     deviceChart: 'Qurilmalar kesimida',
     tableView: 'Jadval',
     chartView: 'Grafik',
@@ -41,7 +43,7 @@ const dict = {
     legendDelivered: 'Доставлено',
     legendFailed: 'Ошибка',
     hourChart: 'Нагрузка по часам',
-    hourHint: 'В среднем, за 30 дней',
+    hourHint: 'По последним 100 сообщениям',
     deviceChart: 'По устройствам',
     tableView: 'Таблица',
     chartView: 'График',
@@ -58,7 +60,7 @@ const dict = {
     legendDelivered: 'Delivered',
     legendFailed: 'Failed',
     hourChart: 'Load by hour',
-    hourHint: 'Average, last 30 days',
+    hourHint: 'Across the last 100 messages',
     deviceChart: 'By device',
     tableView: 'Table',
     chartView: 'Chart',
@@ -68,17 +70,25 @@ const dict = {
 }
 
 interface AnalyticsData {
-  series: typeof dailyStats
+  series: DailyStat[]
   hourly: number[]
   perDevice: { name: string; sent: number }[]
 }
 
-function fetchAnalytics(days: number): Promise<AnalyticsData> {
-  return simulate(() => ({
-    series: dailyStats.slice(-days),
-    hourly: hourlyLoad,
-    perDevice: devices.map((device) => ({ name: device.name, sent: device.sentToday + Math.round(device.dailyLimit * 2.4) })),
-  }))
+async function fetchAnalytics(days: number): Promise<AnalyticsData> {
+  const [series, devices, recent] = await Promise.all([
+    fetchDailyStats(days),
+    fetchDevices(),
+    api<{ items: SmsMessage[] }>('/messages', { query: { pageSize: 100 } }),
+  ])
+  // Hour-of-day histogram over the latest messages.
+  const hourly = Array.from({ length: 24 }, () => 0)
+  for (const message of recent.items) hourly[new Date(message.createdAt).getHours()] += 1
+  return {
+    series,
+    hourly,
+    perDevice: devices.map((device) => ({ name: device.name, sent: device.sentToday })),
+  }
 }
 
 export default function AnalyticsPage() {
@@ -97,11 +107,17 @@ export default function AnalyticsPage() {
     const sent = data.series.reduce((sum, day) => sum + day.sent, 0)
     const delivered = data.series.reduce((sum, day) => sum + day.delivered, 0)
     const failed = data.series.reduce((sum, day) => sum + day.failed, 0)
-    return { sent, delivered, failed, rate: (delivered / sent) * 100, avg: Math.round(sent / data.series.length) }
+    return {
+      sent,
+      delivered,
+      failed,
+      rate: sent > 0 ? (delivered / sent) * 100 : 0,
+      avg: data.series.length > 0 ? Math.round(sent / data.series.length) : 0,
+    }
   }, [data])
 
-  const maxHour = data ? Math.max(...data.hourly) : 1
-  const maxDevice = data ? Math.max(...data.perDevice.map((entry) => entry.sent)) : 1
+  const maxHour = data ? Math.max(1, ...data.hourly) : 1
+  const maxDevice = data ? Math.max(1, ...data.perDevice.map((entry) => entry.sent)) : 1
 
   if (error) {
     return <EmptyState title={c.errorTitle} body={c.errorBody} action={<Button onClick={refetch}>{c.retry}</Button>} />

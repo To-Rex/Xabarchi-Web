@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { ArrowLeft, Mail, MailCheck } from 'lucide-react'
 import { useT } from '@/shared/i18n'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
-import { delay } from '@/shared/api/mockClient'
+import { api } from '@/shared/api/client'
 import { Button, Input } from '@/shared/ui'
 
 const dict = {
@@ -64,9 +64,14 @@ export default function ForgotPasswordPage() {
     }
     setError(undefined)
     setLoading(true)
-    await delay(900)
-    setLoading(false)
-    setSent(true)
+    try {
+      await api('/auth/password/forgot', { method: 'POST', body: { email }, auth: false })
+      setSent(true)
+    } catch {
+      setSent(true) // the endpoint never reveals whether the e-mail exists
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

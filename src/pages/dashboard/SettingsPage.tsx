@@ -1,14 +1,14 @@
-import { useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, Globe, Palette, Send, Trash2 } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Globe, Palette, Send } from 'lucide-react'
 import { LANGS, useLang, useT } from '@/shared/i18n'
 import { commonDict } from '@/shared/i18n/common'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
-import { simulate } from '@/shared/api/mockClient'
-import { devices } from '@/shared/mock/db'
+import { useAsync } from '@/shared/lib/useAsync'
+import { storageGet, storageSet } from '@/shared/lib/storage'
+import { api } from '@/shared/api/client'
 import { cn } from '@/shared/lib/cn'
-import { Button, Card, CardBody, CardHeader, CardTitle, Input, Modal, PageHeader, Select, Switch, ThemeSegmented, useToast } from '@/shared/ui'
-import { signOut } from '@/features/auth/model/authStore'
+import { Button, Card, CardBody, CardHeader, CardTitle, Input, PageHeader, Select, Switch, ThemeSegmented, useToast } from '@/shared/ui'
+import { fetchDevices, setDefaultDevice as apiSetDefaultDevice } from '@/features/devices/api/repository'
 
 const dict = {
   uz: {
@@ -19,7 +19,8 @@ const dict = {
     sending: {
       title: 'Yuborish',
       defaultDevice: 'Asosiy qurilma',
-      dailyLimit: 'Kunlik limit (har bir qurilma)',
+      noDevices: 'Qurilma ulanmagan',
+      dailyLimit: 'Kunlik limit (asosiy qurilma)',
       dailyLimitHint: 'Operator cheklovlaridan oshmaslik uchun',
       retry: 'Xato bo‘lsa qayta urinish',
       retryHint: "Yuborilmagan SMS 5 daqiqadan so'ng qayta yuboriladi",
@@ -33,15 +34,8 @@ const dict = {
       quota: 'Limit 80% ga yetganda',
       email: 'Email orqali ham yuborish',
     },
-    danger: {
-      title: 'Xavfli hudud',
-      deleteAccount: "Hisobni o'chirish",
-      deleteBody: "Barcha ma'lumotlar — xabarlar tarixi, kontaktlar, shablonlar — qaytarib bo'lmas tarzda o'chiriladi.",
-      confirmBody: "Hisobingizni o'chirishni tasdiqlang. Bu amalni bekor qilib bo'lmaydi.",
-      confirmWord: 'Tasdiqlash uchun «OCHIRISH» deb yozing',
-      deletedToast: "Hisob o'chirildi (demo)",
-    },
     savedToast: 'Sozlamalar saqlandi',
+    saveFailed: 'Saqlab bo‘lmadi. Qayta urinib ko‘ring.',
   },
   ru: {
     meta: 'Настройки — Xabarchi',
@@ -51,7 +45,8 @@ const dict = {
     sending: {
       title: 'Отправка',
       defaultDevice: 'Основное устройство',
-      dailyLimit: 'Дневной лимит (на устройство)',
+      noDevices: 'Устройство не подключено',
+      dailyLimit: 'Дневной лимит (основное устройство)',
       dailyLimitHint: 'Чтобы не превышать ограничения оператора',
       retry: 'Повторять при ошибке',
       retryHint: 'Неотправленное SMS будет повторено через 5 минут',
@@ -65,15 +60,8 @@ const dict = {
       quota: 'Лимит достиг 80%',
       email: 'Дублировать на email',
     },
-    danger: {
-      title: 'Опасная зона',
-      deleteAccount: 'Удалить аккаунт',
-      deleteBody: 'Все данные — история сообщений, контакты, шаблоны — будут удалены безвозвратно.',
-      confirmBody: 'Подтвердите удаление аккаунта. Это действие нельзя отменить.',
-      confirmWord: 'Введите «УДАЛИТЬ» для подтверждения',
-      deletedToast: 'Аккаунт удалён (демо)',
-    },
     savedToast: 'Настройки сохранены',
+    saveFailed: 'Не удалось сохранить. Попробуйте ещё раз.',
   },
   en: {
     meta: 'Settings — Xabarchi',
@@ -83,7 +71,8 @@ const dict = {
     sending: {
       title: 'Sending',
       defaultDevice: 'Default device',
-      dailyLimit: 'Daily limit (per device)',
+      noDevices: 'No device connected',
+      dailyLimit: 'Daily limit (default device)',
       dailyLimitHint: 'To stay under carrier restrictions',
       retry: 'Retry on failure',
       retryHint: 'An unsent SMS is retried after 5 minutes',
@@ -97,19 +86,30 @@ const dict = {
       quota: 'Quota reaches 80%',
       email: 'Also send by email',
     },
-    danger: {
-      title: 'Danger zone',
-      deleteAccount: 'Delete account',
-      deleteBody: 'All data — message history, contacts, templates — is deleted irreversibly.',
-      confirmBody: 'Confirm deleting your account. This cannot be undone.',
-      confirmWord: 'Type “DELETE” to confirm',
-      deletedToast: 'Account deleted (demo)',
-    },
     savedToast: 'Settings saved',
+    saveFailed: 'Could not save. Please try again.',
   },
 }
 
-const CONFIRM_WORDS = { uz: 'OCHIRISH', ru: 'УДАЛИТЬ', en: 'DELETE' }
+/** Client-side preferences (retry/quiet-hours/notification toggles). */
+const PREFS_KEY = 'xabarchi:prefs'
+
+interface Prefs {
+  retry: boolean
+  quietHours: boolean
+  notifyOffline: boolean
+  notifyBattery: boolean
+  notifyQuota: boolean
+  notifyEmail: boolean
+}
+
+function loadPrefs(): Prefs {
+  try {
+    return { retry: true, quietHours: false, notifyOffline: true, notifyBattery: true, notifyQuota: true, notifyEmail: false, ...JSON.parse(storageGet(PREFS_KEY) ?? '{}') }
+  } catch {
+    return { retry: true, quietHours: false, notifyOffline: true, notifyBattery: true, notifyQuota: true, notifyEmail: false }
+  }
+}
 
 function SettingRow({ label, hint, control }: { label: string; hint?: string; control: ReactNode }) {
   return (
@@ -129,36 +129,40 @@ export default function SettingsPage() {
   const { lang, setLang } = useLang()
   usePageMeta(t.meta)
   const toast = useToast()
-  const navigate = useNavigate()
 
-  const [defaultDevice, setDefaultDevice] = useState(devices.find((device) => device.isDefault)?.id ?? devices[0].id)
-  const [dailyLimit, setDailyLimit] = useState('800')
-  const [retry, setRetry] = useState(true)
-  const [quietHours, setQuietHours] = useState(false)
-  const [notifyOffline, setNotifyOffline] = useState(true)
-  const [notifyBattery, setNotifyBattery] = useState(true)
-  const [notifyQuota, setNotifyQuota] = useState(true)
-  const [notifyEmail, setNotifyEmail] = useState(false)
+  const { data: devices } = useAsync(fetchDevices)
+  const [defaultDevice, setDefaultDevice] = useState('')
+  const [dailyLimit, setDailyLimit] = useState('')
+  const [prefs, setPrefs] = useState<Prefs>(loadPrefs)
   const [saving, setSaving] = useState(false)
-  const [deleteOpen, setDeleteOpen] = useState(false)
-  const [confirmText, setConfirmText] = useState('')
-  const [deleting, setDeleting] = useState(false)
+
+  useEffect(() => {
+    if (!devices || devices.length === 0) return
+    const current = devices.find((device) => device.isDefault) ?? devices[0]
+    setDefaultDevice((prev) => prev || current.id)
+    setDailyLimit((prev) => prev || String(current.dailyLimit))
+  }, [devices])
+
+  const setPref = (key: keyof Prefs) => (value: boolean) => setPrefs((prev) => ({ ...prev, [key]: value }))
 
   const save = async () => {
     setSaving(true)
-    await simulate(() => undefined, { minDelay: 400, maxDelay: 800 })
-    setSaving(false)
-    toast('success', t.savedToast)
-  }
-
-  const deleteAccount = async () => {
-    setDeleting(true)
-    await simulate(() => undefined, { minDelay: 700, maxDelay: 1200 })
-    setDeleting(false)
-    setDeleteOpen(false)
-    toast('info', t.danger.deletedToast)
-    signOut()
-    navigate('/')
+    try {
+      storageSet(PREFS_KEY, JSON.stringify(prefs))
+      if (defaultDevice) {
+        const wasDefault = devices?.find((device) => device.isDefault)?.id
+        if (wasDefault !== defaultDevice) await apiSetDefaultDevice(defaultDevice)
+        const limit = Number(dailyLimit)
+        if (Number.isFinite(limit) && limit >= 1) {
+          await api(`/devices/${defaultDevice}`, { method: 'PATCH', body: { dailyLimit: Math.min(limit, 100_000) } })
+        }
+      }
+      toast('success', t.savedToast)
+    } catch {
+      toast('error', t.saveFailed)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -212,13 +216,17 @@ export default function SettingsPage() {
             <SettingRow
               label={t.sending.defaultDevice}
               control={
-                <Select value={defaultDevice} onChange={(event) => setDefaultDevice(event.target.value)} containerClassName="w-56" aria-label={t.sending.defaultDevice}>
-                  {devices.map((device) => (
-                    <option key={device.id} value={device.id}>
-                      {device.name}
-                    </option>
-                  ))}
-                </Select>
+                devices && devices.length > 0 ? (
+                  <Select value={defaultDevice} onChange={(event) => setDefaultDevice(event.target.value)} containerClassName="w-56" aria-label={t.sending.defaultDevice}>
+                    {devices.map((device) => (
+                      <option key={device.id} value={device.id}>
+                        {device.name}
+                      </option>
+                    ))}
+                  </Select>
+                ) : (
+                  <span className="text-[13px] text-ink-3">{t.sending.noDevices}</span>
+                )
               }
             />
             <SettingRow
@@ -235,11 +243,11 @@ export default function SettingsPage() {
                 />
               }
             />
-            <SettingRow label={t.sending.retry} hint={t.sending.retryHint} control={<Switch checked={retry} onChange={setRetry} label={t.sending.retry} />} />
+            <SettingRow label={t.sending.retry} hint={t.sending.retryHint} control={<Switch checked={prefs.retry} onChange={setPref('retry')} label={t.sending.retry} />} />
             <SettingRow
               label={t.sending.quietHours}
               hint={t.sending.quietHoursHint}
-              control={<Switch checked={quietHours} onChange={setQuietHours} label={t.sending.quietHours} />}
+              control={<Switch checked={prefs.quietHours} onChange={setPref('quietHours')} label={t.sending.quietHours} />}
             />
           </CardBody>
         </Card>
@@ -253,10 +261,10 @@ export default function SettingsPage() {
             </CardTitle>
           </CardHeader>
           <CardBody className="divide-y divide-line pt-2">
-            <SettingRow label={t.notifications.deviceOffline} control={<Switch checked={notifyOffline} onChange={setNotifyOffline} label={t.notifications.deviceOffline} />} />
-            <SettingRow label={t.notifications.lowBattery} control={<Switch checked={notifyBattery} onChange={setNotifyBattery} label={t.notifications.lowBattery} />} />
-            <SettingRow label={t.notifications.quota} control={<Switch checked={notifyQuota} onChange={setNotifyQuota} label={t.notifications.quota} />} />
-            <SettingRow label={t.notifications.email} control={<Switch checked={notifyEmail} onChange={setNotifyEmail} label={t.notifications.email} />} />
+            <SettingRow label={t.notifications.deviceOffline} control={<Switch checked={prefs.notifyOffline} onChange={setPref('notifyOffline')} label={t.notifications.deviceOffline} />} />
+            <SettingRow label={t.notifications.lowBattery} control={<Switch checked={prefs.notifyBattery} onChange={setPref('notifyBattery')} label={t.notifications.lowBattery} />} />
+            <SettingRow label={t.notifications.quota} control={<Switch checked={prefs.notifyQuota} onChange={setPref('notifyQuota')} label={t.notifications.quota} />} />
+            <SettingRow label={t.notifications.email} control={<Switch checked={prefs.notifyEmail} onChange={setPref('notifyEmail')} label={t.notifications.email} />} />
           </CardBody>
         </Card>
 
@@ -265,47 +273,7 @@ export default function SettingsPage() {
             {c.save}
           </Button>
         </div>
-
-        {/* Danger zone */}
-        <Card className="border-danger/30">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-danger">
-              <AlertTriangle className="size-4" />
-              {t.danger.title}
-            </CardTitle>
-          </CardHeader>
-          <CardBody className="flex flex-wrap items-center justify-between gap-4 pt-3">
-            <p className="max-w-md text-[13px] leading-relaxed text-ink-2">{t.danger.deleteBody}</p>
-            <Button variant="danger" onClick={() => { setConfirmText(''); setDeleteOpen(true) }}>
-              <Trash2 className="size-4" />
-              {t.danger.deleteAccount}
-            </Button>
-          </CardBody>
-        </Card>
       </div>
-
-      {/* Delete confirm */}
-      <Modal
-        open={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        title={t.danger.deleteAccount}
-        closeLabel={c.close}
-        size="sm"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setDeleteOpen(false)}>{c.cancel}</Button>
-            <Button variant="danger" loading={deleting} disabled={confirmText.trim().toUpperCase() !== CONFIRM_WORDS[lang]} onClick={deleteAccount}>
-              <Trash2 className="size-4" />
-              {t.danger.deleteAccount}
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <p className="text-sm leading-relaxed text-ink-2">{t.danger.confirmBody}</p>
-          <Input label={t.danger.confirmWord} value={confirmText} onChange={(event) => setConfirmText(event.target.value)} />
-        </div>
-      </Modal>
     </div>
   )
 }
