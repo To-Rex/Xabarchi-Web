@@ -22,8 +22,10 @@ import {
 import { useLang, useT } from '@/shared/i18n'
 import { formatRelative } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/cn'
+import { useAsync } from '@/shared/lib/useAsync'
 import { Avatar, Dropdown, DropdownItem, DropdownSeparator, LangSwitcher, Logo, LogoMark, ProgressBar, ThemeToggle } from '@/shared/ui'
 import { signOut, useCurrentUser } from '@/features/auth/model/authStore'
+import { fetchOverview } from '@/features/dashboard/api/repository'
 import { markRead, useNotifications, useUnreadCount } from '@/features/notifications/model/store'
 
 const dict = {
@@ -135,11 +137,21 @@ function NavItem({ to, icon, label, end, onClick }: { to: string; icon: ReactNod
   )
 }
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarContent({
+  onNavigate,
+  used,
+  limit,
+}: {
+  onNavigate?: () => void
+  used?: number
+  limit?: number
+}) {
   const t = useT(dict)
   const { lang } = useLang()
-  const used = 8000
-  const limit = 10000
+  const hasData = typeof used === 'number' && typeof limit === 'number'
+  const ratio = hasData && limit! > 0 ? Math.min(1, used! / limit!) : 0
+  const fmt = (value: number) =>
+    new Intl.NumberFormat(lang === 'en' ? 'en-GB' : lang === 'ru' ? 'ru-RU' : 'uz-Latn-UZ').format(value)
 
   return (
     <div className="flex h-full flex-col">
@@ -175,11 +187,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <div className="rounded-xl border border-line bg-sunken/60 p-3.5">
           <div className="flex items-center justify-between text-[13px]">
             <span className="font-medium text-ink-2">{t.quota.title}</span>
-            <span className="tnum font-semibold text-ink">80%</span>
+            <span className="tnum font-semibold text-ink">{hasData ? `${Math.round(ratio * 100)}%` : '—'}</span>
           </div>
-          <ProgressBar value={used / limit} tone={used / limit > 0.9 ? 'danger' : used / limit > 0.75 ? 'gold' : 'brand'} className="mt-2.5" />
+          <ProgressBar value={ratio} tone={ratio > 0.9 ? 'danger' : ratio > 0.75 ? 'gold' : 'brand'} className="mt-2.5" />
           <p className="tnum mt-2 text-xs text-ink-3">
-            {new Intl.NumberFormat(lang === 'en' ? 'en-GB' : lang === 'ru' ? 'ru-RU' : 'uz-Latn-UZ').format(used)} / {new Intl.NumberFormat(lang === 'en' ? 'en-GB' : lang === 'ru' ? 'ru-RU' : 'uz-Latn-UZ').format(limit)} {t.quota.used}
+            {hasData ? `${fmt(used!)} / ${fmt(limit!)} ${t.quota.used}` : `— / —`}
           </p>
           <Link
             to="/app/billing"
@@ -273,6 +285,9 @@ export function DashboardLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const user = useCurrentUser()
+  // Monthly SMS usage for the sidebar meter — refetched on navigation so it
+  // reflects messages sent elsewhere in the app.
+  const { data: overview } = useAsync(fetchOverview, [location.pathname])
 
   useEffect(() => {
     setDrawerOpen(false)
@@ -282,7 +297,7 @@ export function DashboardLayout() {
     <div className="flex min-h-screen">
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-line bg-surface lg:block">
-        <SidebarContent />
+        <SidebarContent used={overview?.monthlyUsed} limit={overview?.monthlyLimit} />
       </aside>
 
       {/* Mobile drawer */}
@@ -310,7 +325,7 @@ export function DashboardLayout() {
               >
                 <X className="size-5" />
               </button>
-              <SidebarContent onNavigate={() => setDrawerOpen(false)} />
+              <SidebarContent onNavigate={() => setDrawerOpen(false)} used={overview?.monthlyUsed} limit={overview?.monthlyLimit} />
             </motion.aside>
           </>
         )}
