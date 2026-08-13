@@ -147,7 +147,11 @@ export default function LoginPage() {
       const from = (location.state as { from?: string } | null)?.from
       navigate(from ?? '/app', { replace: true })
     } catch (error) {
-      if (error instanceof ApiError && error.code === 'email_not_verified') {
+      // Login's only 403 is an unverified account — match on status too, not
+      // just the code, so a fresh backend + stale bundle can't slip through.
+      const unverified =
+        error instanceof ApiError && (error.code === 'email_not_verified' || error.status === 403)
+      if (unverified) {
         setNeedsVerify(true)
         setErrors({})
       } else {
