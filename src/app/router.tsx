@@ -21,6 +21,7 @@ const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPasswordPage'))
 const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage'))
 const VerifyEmailPage = lazy(() => import('@/pages/auth/VerifyEmailPage'))
 const AuthCallbackPage = lazy(() => import('@/pages/auth/AuthCallbackPage'))
+const DemoPage = lazy(() => import('@/pages/auth/DemoPage'))
 
 const OverviewPage = lazy(() => import('@/pages/dashboard/OverviewPage'))
 const SmsPage = lazy(() => import('@/pages/dashboard/SmsPage'))
@@ -81,6 +82,7 @@ export const router = createBrowserRouter([
       { path: '/reset-password', element: <Boundary><ResetPasswordPage /></Boundary> },
       { path: '/verify-email', element: <Boundary><VerifyEmailPage /></Boundary> },
       { path: '/auth/callback', element: <Boundary><AuthCallbackPage /></Boundary> },
+      { path: '/demo', element: <Boundary><DemoPage /></Boundary> },
     ],
   },
   {

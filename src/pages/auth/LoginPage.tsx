@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'motion/react'
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
+import { Eye, EyeOff, Lock, Mail, PlayCircle } from 'lucide-react'
 import { useT } from '@/shared/i18n'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
 import { ApiError } from '@/shared/api/client'
@@ -20,6 +20,8 @@ const dict = {
     submit: 'Kirish',
     noAccount: 'Hisobingiz yo‘qmi?',
     register: "Ro'yxatdan o'tish",
+    demoHint: 'Hisob ochmasdan ko‘rib chiqmoqchimisiz?',
+    demoBtn: 'Demo hisobga kirish',
     errors: {
       email: 'To‘g‘ri email kiriting',
       password: 'Parol kamida 8 belgi bo‘lsin',
@@ -38,6 +40,8 @@ const dict = {
     submit: 'Войти',
     noAccount: 'Нет аккаунта?',
     register: 'Зарегистрироваться',
+    demoHint: 'Хотите посмотреть без регистрации?',
+    demoBtn: 'Войти в демо-аккаунт',
     errors: {
       email: 'Введите корректный email',
       password: 'Пароль — минимум 8 символов',
@@ -56,6 +60,8 @@ const dict = {
     submit: 'Sign in',
     noAccount: 'No account yet?',
     register: 'Create one',
+    demoHint: 'Want a look around without signing up?',
+    demoBtn: 'Open the demo account',
     errors: {
       email: 'Enter a valid email',
       password: 'Password must be at least 8 characters',
@@ -78,6 +84,20 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({})
   const [loading, setLoading] = useState(false)
+  const [demoLoading, setDemoLoading] = useState(false)
+
+  const openDemo = async () => {
+    if (loading || demoLoading) return
+    setDemoLoading(true)
+    setErrors({})
+    try {
+      await login('demo@xabarchi.uz', 'demo1234')
+      navigate('/app', { replace: true })
+    } catch {
+      setErrors({ form: t.errors.network })
+      setDemoLoading(false)
+    }
+  }
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
@@ -143,6 +163,14 @@ export default function LoginPage() {
       </form>
 
       <SocialAuth />
+
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-soft px-4 py-3">
+        <p className="text-[13px] leading-relaxed text-brand-2 dark:text-brand">{t.demoHint}</p>
+        <Button type="button" variant="secondary" size="sm" loading={demoLoading} onClick={openDemo}>
+          <PlayCircle className="size-4" />
+          {t.demoBtn}
+        </Button>
+      </div>
 
       <p className="mt-6 text-center text-sm text-ink-2">
         {t.noAccount}{' '}

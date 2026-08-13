@@ -17,6 +17,7 @@ import {
   FileText,
   Image,
   QrCode,
+  PlayCircle,
   Send,
   ShieldCheck,
   Smartphone,
@@ -38,6 +39,7 @@ const dict = {
       title2: "O'z telefoningizdan.",
       body: "Xabarchi oddiy Android telefonni biznesingizning SMS shlyuziga aylantiradi. Aggregator shartnomalari, oldindan to'lovlar va murakkab hujjatlarsiz — o'z SIM-kartangiz, o'z tarifingiz.",
       ctaPrimary: 'Bepul boshlash',
+      ctaDemo: 'Jonli demo',
       ctaSecondary: "API hujjatlari",
       note: 'Kredit karta shart emas · 500 SMS/oy bepul',
       phoneApp: 'Xabarchi Android',
@@ -110,6 +112,7 @@ const dict = {
       title2: 'Со своего телефона.',
       body: 'Xabarchi превращает обычный Android-телефон в SMS-шлюз вашего бизнеса. Без договоров с агрегаторами, предоплат и бумажной волокиты — ваша SIM-карта, ваш тариф.',
       ctaPrimary: 'Начать бесплатно',
+      ctaDemo: 'Живое демо',
       ctaSecondary: 'API документация',
       note: 'Без кредитной карты · 500 SMS/мес бесплатно',
       phoneApp: 'Xabarchi Android',
@@ -182,6 +185,7 @@ const dict = {
       title2: 'From your own phone.',
       body: 'Xabarchi turns an ordinary Android phone into your business SMS gateway. No aggregator contracts, prepayments or paperwork — your SIM card, your rates.',
       ctaPrimary: 'Start for free',
+      ctaDemo: 'Live demo',
       ctaSecondary: 'API docs',
       note: 'No credit card required · 500 SMS/mo free',
       phoneApp: 'Xabarchi Android',
@@ -540,6 +544,12 @@ export default function HomePage() {
                 <Button size="lg" variant="secondary">
                   <Braces className="size-4" />
                   {t.hero.ctaSecondary}
+                </Button>
+              </Link>
+              <Link to="/demo">
+                <Button size="lg" variant="ghost">
+                  <PlayCircle className="size-4" />
+                  {t.hero.ctaDemo}
                 </Button>
               </Link>
             </motion.div>
