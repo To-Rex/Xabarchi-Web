@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'motion/react'
-import { ChevronLeft, ChevronRight, PenLine, Search, Smartphone } from 'lucide-react'
+import { ChevronLeft, ChevronRight, PenLine, RefreshCw, Search, Smartphone } from 'lucide-react'
 import { useLang, useT } from '@/shared/i18n'
 import { commonDict } from '@/shared/i18n/common'
 import { useAsync } from '@/shared/lib/useAsync'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
 import { formatDateTime, formatPhone, formatTime } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/cn'
+import { ApiError } from '@/shared/api/client'
 import type { MessageStatus, SmsMessage } from '@/shared/api/types'
-import { Button, Card, EmptyState, Input, MessageStatusBadge, Modal, PageHeader, PriorityBadge, Skeleton, Tabs } from '@/shared/ui'
-import { fetchMessages, getContactName, getDeviceName } from '@/features/sms/api/repository'
+import { Button, Card, EmptyState, Input, MessageStatusBadge, Modal, PageHeader, PriorityBadge, Skeleton, Tabs, useToast } from '@/shared/ui'
+import { fetchMessages, getContactName, getDeviceName, resendSms } from '@/features/sms/api/repository'
 
 const dict = {
   uz: {
@@ -33,6 +34,9 @@ const dict = {
       failReason: 'Sabab',
       reasons: { no_signal: 'Signal yo‘q', invalid_number: 'Raqam noto‘g‘ri', device_offline: 'Qurilma oflayn' },
     },
+    resend: 'Qayta yuborish',
+    resentToast: 'SMS qayta navbatga qo‘shildi',
+    resendFailed: 'Qayta yuborib bo‘lmadi',
     pageOf: (page: number, total: number) => `${page} / ${total}-sahifa`,
   },
   ru: {
@@ -55,6 +59,9 @@ const dict = {
       failReason: 'Причина',
       reasons: { no_signal: 'Нет сигнала', invalid_number: 'Неверный номер', device_offline: 'Устройство офлайн' },
     },
+    resend: 'Отправить снова',
+    resentToast: 'SMS снова добавлено в очередь',
+    resendFailed: 'Не удалось отправить снова',
     pageOf: (page: number, total: number) => `Стр. ${page} из ${total}`,
   },
   en: {
@@ -77,6 +84,9 @@ const dict = {
       failReason: 'Reason',
       reasons: { no_signal: 'No signal', invalid_number: 'Invalid number', device_offline: 'Device offline' },
     },
+    resend: 'Resend',
+    resentToast: 'SMS re-queued',
+    resendFailed: 'Could not resend',
     pageOf: (page: number, total: number) => `Page ${page} of ${total}`,
   },
 }
@@ -97,11 +107,13 @@ export default function SmsPage() {
   const c = useT(commonDict)
   const { lang } = useLang()
   usePageMeta(t.meta)
+  const toast = useToast()
 
   const [tab, setTab] = useState<StatusTab>('all')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<SmsMessage | null>(null)
+  const [resending, setResending] = useState(false)
   const debouncedSearch = useDebounced(search)
 
   const pageSize = 12
@@ -116,6 +128,20 @@ export default function SmsPage() {
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / pageSize)) : 1
   const counts = data?.countsByStatus
+
+  const resend = async (message: SmsMessage) => {
+    setResending(true)
+    try {
+      await resendSms(message.id)
+      toast('success', t.resentToast, formatPhone(message.to))
+      setSelected(null)
+      refetch()
+    } catch (err) {
+      toast('error', err instanceof ApiError ? err.message : t.resendFailed)
+    } finally {
+      setResending(false)
+    }
+  }
 
   const tabs = useMemo(
     () => [
@@ -276,7 +302,20 @@ export default function SmsPage() {
       </Card>
 
       {/* Detail modal */}
-      <Modal open={!!selected} onClose={() => setSelected(null)} title={t.detail.title} closeLabel={c.close}>
+      <Modal
+        open={!!selected}
+        onClose={() => setSelected(null)}
+        title={t.detail.title}
+        closeLabel={c.close}
+        footer={
+          selected && (
+            <Button loading={resending} onClick={() => resend(selected)}>
+              <RefreshCw className="size-4" />
+              {t.resend}
+            </Button>
+          )
+        }
+      >
         {selected && (
           <div className="space-y-5">
             <div className="rounded-2xl rounded-bl-md bg-brand-soft p-4">

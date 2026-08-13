@@ -65,6 +65,11 @@ export function sendSms(payload: SendPayload): Promise<SmsMessage[]> {
   })
 }
 
+/** Re-queue an existing message (same recipient, text, priority). */
+export function resendSms(id: number): Promise<SmsMessage> {
+  return api<SmsMessage>(`/messages/${id}/resend`, { method: 'POST' })
+}
+
 export function getDeviceName(deviceId?: string | null): string {
   if (!deviceId) return '—'
   return deviceNames.get(deviceId) ?? deviceId.slice(0, 8)
