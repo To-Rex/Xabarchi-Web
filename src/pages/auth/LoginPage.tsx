@@ -1,12 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'motion/react'
-import { Eye, EyeOff, Lock, Mail, PlayCircle } from 'lucide-react'
+import { Eye, EyeOff, Lock, Mail, MailWarning, PlayCircle } from 'lucide-react'
 import { useT } from '@/shared/i18n'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
 import { ApiError } from '@/shared/api/client'
 import { Button, Input } from '@/shared/ui'
-import { login } from '@/features/auth/model/authStore'
+import { login, resendVerification } from '@/features/auth/model/authStore'
 import { SocialAuth } from './SocialAuth'
 
 const dict = {
@@ -29,6 +29,9 @@ const dict = {
       network: 'Server bilan bog‘lanib bo‘lmadi. Qayta urinib ko‘ring.',
     },
     showPassword: 'Parolni ko‘rsatish',
+    notVerified: 'Emailingiz hali tasdiqlanmagan. Pochtangizdagi havolani bosing yoki xatni qayta yuboring.',
+    resendVerify: 'Tasdiqlash xatini qayta yuborish',
+    resendDone: 'Yuborildi ✓',
   },
   ru: {
     meta: 'Вход — Xabarchi',
@@ -49,6 +52,9 @@ const dict = {
       network: 'Не удалось связаться с сервером. Попробуйте ещё раз.',
     },
     showPassword: 'Показать пароль',
+    notVerified: 'Email ещё не подтверждён. Перейдите по ссылке из письма или отправьте его снова.',
+    resendVerify: 'Отправить письмо снова',
+    resendDone: 'Отправлено ✓',
   },
   en: {
     meta: 'Sign in — Xabarchi',
@@ -69,6 +75,9 @@ const dict = {
       network: 'Could not reach the server. Please try again.',
     },
     showPassword: 'Show password',
+    notVerified: 'Your email isn’t verified yet. Click the link in your inbox, or resend the email.',
+    resendVerify: 'Resend verification email',
+    resendDone: 'Sent ✓',
   },
 }
 
@@ -85,6 +94,20 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({})
   const [loading, setLoading] = useState(false)
   const [demoLoading, setDemoLoading] = useState(false)
+  const [needsVerify, setNeedsVerify] = useState(false)
+  const [resending, setResending] = useState(false)
+  const [resent, setResent] = useState(false)
+
+  const resend = async () => {
+    if (resending || !EMAIL_RE.test(email)) return
+    setResending(true)
+    try {
+      await resendVerification(email)
+      setResent(true)
+    } finally {
+      setResending(false)
+    }
+  }
 
   const openDemo = async () => {
     if (loading || demoLoading) return
@@ -108,14 +131,21 @@ export default function LoginPage() {
     if (Object.keys(next).length > 0) return
 
     setLoading(true)
+    setNeedsVerify(false)
+    setResent(false)
     try {
       await login(email, password)
       const from = (location.state as { from?: string } | null)?.from
       navigate(from ?? '/app', { replace: true })
     } catch (error) {
-      setErrors({
-        form: error instanceof ApiError && error.status === 401 ? t.errors.credentials : t.errors.network,
-      })
+      if (error instanceof ApiError && error.code === 'email_not_verified') {
+        setNeedsVerify(true)
+        setErrors({})
+      } else {
+        setErrors({
+          form: error instanceof ApiError && error.status === 401 ? t.errors.credentials : t.errors.network,
+        })
+      }
       setLoading(false)
     }
   }
@@ -157,6 +187,17 @@ export default function LoginPage() {
           </Link>
         </div>
         {errors.form && <p className="text-[13px] font-medium text-danger">{errors.form}</p>}
+        {needsVerify && (
+          <div className="rounded-xl bg-gold-soft p-3.5">
+            <p className="flex items-start gap-2 text-[13px] leading-relaxed text-gold">
+              <MailWarning className="mt-0.5 size-4 shrink-0" />
+              {t.notVerified}
+            </p>
+            <Button type="button" variant="secondary" size="sm" className="mt-2.5" loading={resending} disabled={resent} onClick={resend}>
+              {resent ? t.resendDone : t.resendVerify}
+            </Button>
+          </div>
+        )}
         <Button type="submit" loading={loading} className="w-full" size="lg">
           {t.submit}
         </Button>

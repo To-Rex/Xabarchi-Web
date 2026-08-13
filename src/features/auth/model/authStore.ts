@@ -64,11 +64,18 @@ export interface RegisterPayload {
   password: string
 }
 
-export async function register(payload: RegisterPayload): Promise<UserProfile> {
-  const data = await api<AuthResponse>('/auth/register', { method: 'POST', body: payload, auth: false })
-  setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken })
-  setUser(data.user)
-  return data.user
+/**
+ * Register the account. No session is issued — the user must confirm their
+ * e-mail (via the link we send) before they can sign in, so this resolves with
+ * nothing and the UI shows a "check your e-mail" step.
+ */
+export async function register(payload: RegisterPayload): Promise<void> {
+  await api('/auth/register', { method: 'POST', body: payload, auth: false })
+}
+
+/** Re-send the verification e-mail (unauthenticated; safe to call pre-login). */
+export async function resendVerification(email: string): Promise<void> {
+  await api('/auth/email/resend', { method: 'POST', body: { email }, auth: false })
 }
 
 /** OAuth callback hands us a ready token pair via the URL fragment. */

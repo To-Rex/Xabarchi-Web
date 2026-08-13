@@ -11,30 +11,30 @@ const dict = {
     meta: 'Email tasdiqlash — Xabarchi',
     working: 'Email tasdiqlanmoqda…',
     okTitle: 'Email tasdiqlandi!',
-    okBody: 'Endi hisobingizdan to‘liq foydalanishingiz mumkin.',
+    okBody: 'Endi hisobingizga kirishingiz mumkin.',
     failTitle: 'Tasdiqlab bo‘lmadi',
-    failBody: 'Havola eskirgan yoki yaroqsiz. Paneldan qayta yuborishingiz mumkin.',
-    toApp: 'Panelga o‘tish',
+    failBody: 'Havola eskirgan yoki yaroqsiz. Kirish sahifasidan xatni qayta yuborishingiz mumkin.',
+    toApp: 'Kirishga o‘tish',
     toLogin: 'Kirish',
   },
   ru: {
     meta: 'Подтверждение email — Xabarchi',
     working: 'Подтверждаем email…',
     okTitle: 'Email подтверждён!',
-    okBody: 'Теперь аккаунт полностью активен.',
+    okBody: 'Теперь вы можете войти в аккаунт.',
     failTitle: 'Не удалось подтвердить',
-    failBody: 'Ссылка устарела или недействительна. Отправьте её заново из панели.',
-    toApp: 'В панель',
+    failBody: 'Ссылка устарела или недействительна. Отправьте её заново со страницы входа.',
+    toApp: 'Перейти ко входу',
     toLogin: 'Войти',
   },
   en: {
     meta: 'Verify email — Xabarchi',
     working: 'Verifying your email…',
     okTitle: 'Email verified!',
-    okBody: 'Your account is now fully active.',
+    okBody: 'You can now sign in to your account.',
     failTitle: 'Verification failed',
-    failBody: 'The link is expired or invalid. Resend it from the dashboard.',
-    toApp: 'Open dashboard',
+    failBody: 'The link is expired or invalid. Resend it from the sign-in page.',
+    toApp: 'Go to sign in',
     toLogin: 'Sign in',
   },
 }
@@ -74,7 +74,7 @@ export default function VerifyEmailPage() {
           </span>
           <h1 className="mt-6 font-display text-2xl font-semibold text-ink">{t.okTitle}</h1>
           <p className="mt-2 text-sm text-ink-2">{t.okBody}</p>
-          <Link to="/app" className="mt-6 text-sm font-semibold text-brand transition-colors hover:text-brand-2">
+          <Link to="/login" className="mt-6 text-sm font-semibold text-brand transition-colors hover:text-brand-2">
             {t.toApp}
           </Link>
         </>

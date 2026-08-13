@@ -141,7 +141,7 @@ export default function ProfilePage() {
   const resendVerification = async () => {
     setSendingVerify(true)
     try {
-      await api('/auth/email/resend', { method: 'POST' })
+      await api('/auth/email/resend', { method: 'POST', body: { email: user.email }, auth: false })
       toast('success', t.verifySent)
     } catch {
       toast('error', t.saveFailed)

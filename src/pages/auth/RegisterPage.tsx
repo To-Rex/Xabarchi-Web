@@ -1,12 +1,12 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
-import { Building2, CheckCircle2, Lock, Mail, Phone, UserRound } from 'lucide-react'
+import { Building2, Lock, Mail, MailCheck, Phone, UserRound } from 'lucide-react'
 import { useT } from '@/shared/i18n'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
 import { ApiError } from '@/shared/api/client'
 import { Button, Input } from '@/shared/ui'
-import { register } from '@/features/auth/model/authStore'
+import { register, resendVerification } from '@/features/auth/model/authStore'
 import { SocialAuth } from './SocialAuth'
 
 const dict = {
@@ -23,8 +23,12 @@ const dict = {
     login: 'Kirish',
     terms: 'Davom etish orqali siz foydalanish shartlari va maxfiylik siyosatiga rozilik bildirasiz.',
     phone: 'Telefon',
-    successTitle: 'Hisobingiz tayyor!',
-    successBody: 'Boshqaruv paneliga yo‘naltirilmoqdasiz…',
+    successTitle: 'Emailingizni tasdiqlang',
+    successBody: 'Tasdiqlash havolasini quyidagi manzilga yubordik. Kirishdan oldin havolani bosib, emailingizni tasdiqlang.',
+    successSpam: 'Xat kelmadimi? “Spam” papkasini ham tekshiring.',
+    resend: 'Xatni qayta yuborish',
+    resendDone: 'Yuborildi ✓',
+    backToLogin: 'Kirishga o‘tish',
     errors: {
       name: 'Ismingizni kiriting',
       email: 'To‘g‘ri email kiriting',
@@ -48,8 +52,12 @@ const dict = {
     login: 'Войти',
     terms: 'Продолжая, вы соглашаетесь с условиями использования и политикой конфиденциальности.',
     phone: 'Телефон',
-    successTitle: 'Аккаунт готов!',
-    successBody: 'Перенаправляем в панель управления…',
+    successTitle: 'Подтвердите email',
+    successBody: 'Мы отправили ссылку для подтверждения на адрес ниже. Подтвердите email перед входом.',
+    successSpam: 'Письма нет? Проверьте папку «Спам».',
+    resend: 'Отправить письмо снова',
+    resendDone: 'Отправлено ✓',
+    backToLogin: 'Перейти ко входу',
     errors: {
       name: 'Введите имя',
       email: 'Введите корректный email',
@@ -73,8 +81,12 @@ const dict = {
     login: 'Sign in',
     terms: 'By continuing you agree to the terms of service and privacy policy.',
     phone: 'Phone',
-    successTitle: 'Your account is ready!',
-    successBody: 'Taking you to the dashboard…',
+    successTitle: 'Verify your email',
+    successBody: 'We sent a verification link to the address below. Confirm your email before signing in.',
+    successSpam: 'No email? Check your “Spam” folder too.',
+    resend: 'Resend email',
+    resendDone: 'Sent ✓',
+    backToLogin: 'Go to sign in',
     errors: {
       name: 'Enter your name',
       email: 'Enter a valid email',
@@ -92,14 +104,27 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export default function RegisterPage() {
   const t = useT(dict)
   usePageMeta(t.meta)
-  const navigate = useNavigate()
   const [form, setForm] = useState({ name: '', company: '', email: '', phone: '', password: '' })
   const [errors, setErrors] = useState<Partial<typeof form> & { form?: string }>({})
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
+  const [sentEmail, setSentEmail] = useState('')
+  const [resending, setResending] = useState(false)
+  const [resent, setResent] = useState(false)
 
   const set = (key: keyof typeof form) => (event: ChangeEvent<HTMLInputElement>) =>
     setForm((prev) => ({ ...prev, [key]: event.target.value }))
+
+  const resend = async () => {
+    if (resending || !sentEmail) return
+    setResending(true)
+    try {
+      await resendVerification(sentEmail)
+      setResent(true)
+    } finally {
+      setResending(false)
+    }
+  }
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
@@ -123,8 +148,8 @@ export default function RegisterPage() {
         company: form.company.trim(),
         password: form.password,
       })
+      setSentEmail(form.email)
       setDone(true)
-      setTimeout(() => navigate('/app', { replace: true }), 1200)
     } catch (error) {
       setErrors({
         form:
@@ -147,18 +172,26 @@ export default function RegisterPage() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ type: 'spring', stiffness: 380, damping: 26 }}
-            className="flex flex-col items-center py-16 text-center"
+            className="flex flex-col items-center py-12 text-center"
           >
             <motion.span
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 420, damping: 20, delay: 0.1 }}
-              className="flex size-16 items-center justify-center rounded-full bg-ok-soft"
+              className="flex size-16 items-center justify-center rounded-full bg-brand-soft"
             >
-              <CheckCircle2 className="size-8 text-ok" />
+              <MailCheck className="size-8 text-brand" />
             </motion.span>
             <h1 className="mt-6 font-display text-2xl font-semibold text-ink">{t.successTitle}</h1>
-            <p className="mt-2 text-sm text-ink-2">{t.successBody}</p>
+            <p className="mt-2 max-w-sm text-sm leading-relaxed text-ink-2">{t.successBody}</p>
+            <p className="tnum mt-3 rounded-lg bg-sunken px-3 py-1.5 font-mono text-sm font-medium text-ink">{sentEmail}</p>
+            <p className="mt-3 text-xs text-ink-3">{t.successSpam}</p>
+            <Button variant="secondary" className="mt-6" loading={resending} disabled={resent} onClick={resend}>
+              {resent ? t.resendDone : t.resend}
+            </Button>
+            <Link to="/login" className="mt-4 text-sm font-semibold text-brand transition-colors hover:text-brand-2">
+              {t.backToLogin}
+            </Link>
           </motion.div>
         ) : (
           <motion.div key="form" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
