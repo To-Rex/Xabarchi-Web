@@ -8,6 +8,7 @@ import { DashboardLayout } from './layouts/DashboardLayout'
 import { RouteError } from './RouteError'
 
 const HomePage = lazy(() => import('@/pages/marketing/HomePage'))
+const MobileAppPage = lazy(() => import('@/pages/marketing/MobileAppPage'))
 const PricingPage = lazy(() => import('@/pages/marketing/PricingPage'))
 const FaqPage = lazy(() => import('@/pages/marketing/FaqPage'))
 const DocsPage = lazy(() => import('@/pages/marketing/DocsPage'))
@@ -64,6 +65,7 @@ export const router = createBrowserRouter([
     errorElement: <RouteError />,
     children: [
       { path: '/', element: <Boundary><HomePage /></Boundary> },
+      { path: '/mobile', element: <Boundary><MobileAppPage /></Boundary> },
       { path: '/pricing', element: <Boundary><PricingPage /></Boundary> },
       { path: '/faq', element: <Boundary><FaqPage /></Boundary> },
       { path: '/docs', element: <Boundary><DocsPage /></Boundary> },

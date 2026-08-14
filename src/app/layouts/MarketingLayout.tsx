@@ -9,7 +9,7 @@ import { Button, LangSwitcher, Logo, ThemeToggle } from '@/shared/ui'
 
 const dict = {
   uz: {
-    nav: { product: 'Imkoniyatlar', pricing: 'Narxlar', docs: 'API hujjatlari', faq: 'Savollar', contact: 'Aloqa' },
+    nav: { product: 'Imkoniyatlar', app: 'Mobil ilova', pricing: 'Narxlar', docs: 'API hujjatlari', faq: 'Savollar', contact: 'Aloqa' },
     login: 'Kirish',
     cta: "Bepul boshlash",
     footer: {
@@ -25,7 +25,7 @@ const dict = {
     },
   },
   ru: {
-    nav: { product: 'Возможности', pricing: 'Цены', docs: 'API документация', faq: 'Вопросы', contact: 'Контакты' },
+    nav: { product: 'Возможности', app: 'Приложение', pricing: 'Цены', docs: 'API документация', faq: 'Вопросы', contact: 'Контакты' },
     login: 'Войти',
     cta: 'Начать бесплатно',
     footer: {
@@ -41,7 +41,7 @@ const dict = {
     },
   },
   en: {
-    nav: { product: 'Features', pricing: 'Pricing', docs: 'API docs', faq: 'FAQ', contact: 'Contact' },
+    nav: { product: 'Features', app: 'Mobile app', pricing: 'Pricing', docs: 'API docs', faq: 'FAQ', contact: 'Contact' },
     login: 'Sign in',
     cta: 'Start for free',
     footer: {
@@ -78,6 +78,7 @@ export function MarketingLayout() {
 
   const links = [
     { to: '/#features', label: t.nav.product, hash: true },
+    { to: '/mobile', label: t.nav.app },
     { to: '/pricing', label: t.nav.pricing },
     { to: '/docs', label: t.nav.docs },
     { to: '/faq', label: t.nav.faq },
@@ -243,6 +244,7 @@ export function MarketingLayout() {
             <h4 className="text-[13px] font-semibold uppercase tracking-wider text-ink-3">{t.footer.product}</h4>
             <ul className="mt-3 space-y-2 text-sm">
               <li><a href="/#features" className="text-ink-2 transition-colors hover:text-brand">{t.nav.product}</a></li>
+              <li><Link to="/mobile" className="text-ink-2 transition-colors hover:text-brand">{t.nav.app}</Link></li>
               <li><Link to="/pricing" className="text-ink-2 transition-colors hover:text-brand">{t.nav.pricing}</Link></li>
               <li><Link to="/docs" className="text-ink-2 transition-colors hover:text-brand">{t.nav.docs}</Link></li>
             </ul>
