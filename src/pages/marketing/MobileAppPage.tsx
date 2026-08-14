@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'motion/react'
+import { motion, useReducedMotion } from 'motion/react'
 import {
   ArrowLeft,
   ArrowRight,
@@ -28,6 +28,7 @@ import {
 import { useT } from '@/shared/i18n'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
 import { Button, Reveal } from '@/shared/ui'
+import { StatusRing } from '@/shared/ui/StatusRing'
 
 /* ------------------------------------------------------------------ i18n */
 
@@ -334,6 +335,7 @@ function AppTopBar({ title, sub }: { title: string; sub: string }) {
 /* ------------------------------------------------------ dashboard screen */
 
 function DashboardPhone({ labels }: { labels: Record<string, string> }) {
+  const reduceMotion = useReducedMotion()
   const logs = [
     { to: '+998 90 123 45 67', text: 'Buyurtmangiz #4213 qabul qilindi ✅', tone: 'ok', badge: '✓✓' },
     { to: '+998 93 555 77 13', text: 'Tasdiqlash kodingiz: 48213', tone: 'brand', badge: 'SMS' },
@@ -356,19 +358,15 @@ function DashboardPhone({ labels }: { labels: Record<string, string> }) {
           </div>
           <Marker n={2} className="-left-2 -top-2" />
         </div>
-        <div className="relative flex size-[124px] items-center justify-center">
-          {[0, 1].map((i) => (
-            <motion.span
-              key={i}
-              aria-hidden
-              className="absolute size-full rounded-full border-2 border-brand"
-              animate={{ scale: [0.85, 1.6], opacity: [0.45, 0] }}
-              transition={{ duration: 2.4, repeat: Infinity, delay: i * 1.2, ease: 'easeOut' }}
-            />
-          ))}
-          <div className="relative flex size-[88px] items-center justify-center rounded-full bg-gradient-to-b from-brand to-brand-2 shadow-pop">
-            <Power className="size-8 text-brand-ink" strokeWidth={2.4} />
-          </div>
+        <div className="relative flex size-[132px] items-center justify-center">
+          <StatusRing size={132} />
+          <motion.div
+            className="relative z-10 flex size-[78px] items-center justify-center rounded-full bg-gradient-to-b from-brand to-brand-2 shadow-pop"
+            animate={reduceMotion ? undefined : { scale: [1, 1.03, 1] }}
+            transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <Power className="size-7 text-brand-ink" strokeWidth={2.4} />
+          </motion.div>
           <Marker n={1} className="-right-1 top-1" />
         </div>
         <p className="mt-2.5 flex items-center gap-1.5 text-[12px] font-semibold text-brand">
