@@ -1,141 +1,218 @@
 import { useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+import { Play, TerminalSquare } from 'lucide-react'
 import { useT } from '@/shared/i18n'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
 import { cn } from '@/shared/lib/cn'
-import { Badge, CodeBlock, Reveal, SegmentedControl } from '@/shared/ui'
+import { API_BASE } from '@/shared/api/client'
+import { Badge, Button, CodeBlock, Input, Reveal, SegmentedControl, Textarea } from '@/shared/ui'
+
+/* ------------------------------------------------------------------ i18n */
 
 const dict = {
   uz: {
-    meta: { title: 'API hujjatlari — Xabarchi', desc: 'Xabarchi REST API: autentifikatsiya, SMS yuborish, statuslar, webhooklar.' },
+    meta: { title: 'API hujjatlari — Xabarchi', desc: 'Xabarchi REST API: autentifikatsiya, SMS yuborish va shu yerda sinab ko‘rish.' },
     title: 'API hujjatlari',
-    subtitle: "Xabarchi REST API bilan istalgan tizimdan SMS yuboring. Bazaviy manzil: ",
-    nav: { intro: 'Kirish', auth: 'Autentifikatsiya', send: 'SMS yuborish', list: 'Xabarlar ro‘yxati', status: 'Xabar holati', devices: 'Qurilmalar', telegram: 'Telegram bot', webhooks: 'Webhooklar', errors: 'Xatoliklar' },
-    intro: {
-      body: "Barcha so'rovlar JSON qabul qiladi va JSON qaytaradi. API kalitini boshqaruv panelining «API» bo'limida yaratasiz. Sinov uchun xab_test_ prefiksli kalitdan foydalaning — xabarlar yuborilmaydi, lekin barcha javoblar haqiqiydek qaytadi.",
-    },
-    auth: {
-      body: "Har bir so'rovga Authorization sarlavhasida Bearer token qo'shing. Kalitlar ikki xil: xab_live_ (haqiqiy yuborish) va xab_test_ (sinov rejimi).",
-    },
-    send: { body: 'Bitta SMS yuborish. Matn 160 belgidan (kirillcha 70) oshsa, avtomatik segmentlarga bo‘linadi.' },
-    list: { body: "Xabarlar ro'yxati — sahifalash va status bo'yicha filtr bilan." },
-    status: { body: 'Bitta xabarning joriy holatini olish. Holatlar: queued → sending → sent → delivered yoki failed.' },
-    devices: { body: "Ulangan qurilmalar ro'yxati: holat, batareya, signal va kunlik limit." },
-    telegram: {
-      body: "Telegram bot — alohida xizmat: har bir kompaniya o'z botini ulaydi va obunachilariga istalgan turdagi kontent yuboradi. kind maydoni turini belgilaydi: text, photo, video, document yoki post (matn + inline tugmalar). Media uchun media_url beriladi, post uchun buttons massivi qo'shiladi. Kalitga telegram.send ruxsati kerak.",
-      list: "Obunachilar ro'yxati — sahifalash bilan.",
-    },
-    webhooks: { body: "Xabar holati o'zgarganda sizning URL manzilingizga POST so'rov yuboramiz. Har bir so'rov X-Xabarchi-Signature sarlavhasi bilan imzolanadi." },
-    errors: { body: 'API standart HTTP kodlarini ishlatadi. Xato tanasida code va message maydonlari bo‘ladi.' },
-    errorRows: [
-      ['400', 'invalid_request — parametr yetishmayapti yoki noto‘g‘ri'],
-      ['401', 'unauthorized — API kalit noto‘g‘ri yoki bekor qilingan'],
-      ['402', 'quota_exceeded — oylik SMS limiti tugagan'],
-      ['429', 'rate_limited — so‘rovlar tezligi oshib ketdi'],
-      ['503', 'no_device — faol qurilma topilmadi'],
+    subtitle: 'Xabarchi REST API bilan istalgan tizimdan SMS yuboring. Bazaviy manzil: ',
+    nav: { intro: 'Kirish', auth: 'Autentifikatsiya', send: 'SMS yuborish', playground: 'Sinab ko‘rish', message: 'Xabar obyekti', errors: 'Xatoliklar', limits: 'Limitlar' },
+    intro: 'Barcha so‘rovlar JSON qabul qiladi va JSON qaytaradi. Maydonlar camelCase’da. API kalitini boshqaruv panelining «API» bo‘limida yaratasiz — kalit faqat bir marta ko‘rsatiladi, uni xavfsiz saqlang.',
+    getKey: 'API kalit olish',
+    auth: 'Har bir so‘rovga X-API-Key sarlavhasida kalitni qo‘shing. Kalit xab_live_ bilan boshlanadi va sms.send ruxsatiga ega bo‘lishi kerak.',
+    send: 'Bitta so‘rovda bir yoki bir nechta raqamga SMS yuboring. to — raqamlar massivi. Matn 160 belgidan (kirillcha 70) oshsa, avtomatik segmentlarga bo‘linadi va har biri alohida hisoblanadi.',
+    reqTitle: 'So‘rov tanasi',
+    fields: [
+      ['to', 'string[]', 'Qabul qiluvchi raqam(lar), xalqaro formatda. 1–500 ta.'],
+      ['text', 'string', 'Xabar matni. 1–1000 belgi.'],
+      ['priority', 'string', 'urgent · transactional · bulk (ixtiyoriy, default: transactional).'],
+      ['deviceId', 'uuid?', 'Muayyan qurilmadan yuborish (ixtiyoriy).'],
     ],
+    play: {
+      title: 'Shu yerda sinab ko‘ring',
+      body: 'API kalitingizni kiriting va haqiqiy so‘rov yuboring — javobni shu yerda ko‘rasiz. ⚠️ Bu HAQIQIY SMS yuboradi (limit va faol qurilma talab qilinadi).',
+      key: 'API kaliti (X-API-Key)',
+      to: 'Qabul qiluvchi(lar) — vergul bilan',
+      text: 'Xabar matni',
+      priority: 'Muhimlik',
+      send: 'So‘rov yuborish',
+      sending: 'Yuborilmoqda…',
+      result: 'Javob',
+      needKey: 'Avval API kalitini kiriting',
+    },
+    message: 'Muvaffaqiyatli so‘rov 201 va yaratilgan xabarlar massivini qaytaradi. Har bir xabar obyekti quyidagi maydonlarga ega:',
+    msgFields: [
+      ['id', 'number', 'Xabar identifikatori.'],
+      ['to', 'string', 'Qabul qiluvchi raqam.'],
+      ['text', 'string', 'Yuborilgan matn.'],
+      ['status', 'string', 'queued → sending → sent → delivered yoki failed.'],
+      ['priority', 'string', 'urgent · transactional · bulk.'],
+      ['segments', 'number', 'SMS segmentlari soni.'],
+      ['createdAt', 'datetime', 'Yaratilgan vaqti (ISO 8601).'],
+      ['deliveredAt', 'datetime?', 'Yetkazilgan vaqti (agar delivered bo‘lsa).'],
+      ['failReason', 'string?', 'Xatolik sababi (agar failed bo‘lsa): no_sim, no_balance, ...'],
+    ],
+    errors: 'API standart HTTP kodlarini ishlatadi. Xato tanasida code va message maydonlari bo‘ladi.',
+    errorRows: [
+      ['401', 'auth_error — API kalit noto‘g‘ri, yo‘q yoki bekor qilingan'],
+      ['403', 'forbidden — kalitda sms.send ruxsati yo‘q'],
+      ['402', 'quota_exceeded — oylik SMS limiti tugagan'],
+      ['422', 'invalid_phone — raqam noto‘g‘ri formatda'],
+      ['429', 'rate_limited — daqiqada 30 dan ortiq so‘rov'],
+    ],
+    limits: 'Yuborish tezligi: har bir hisob uchun daqiqada 30 ta so‘rov. Oylik SMS limiti tarifingizga bog‘liq (bepul: 500/oy). Segmentlarга bo‘lingan uzun xabarlar har biri alohida hisoblanadi.',
   },
   ru: {
-    meta: { title: 'API документация — Xabarchi', desc: 'Xabarchi REST API: аутентификация, отправка SMS, статусы, вебхуки.' },
+    meta: { title: 'API документация — Xabarchi', desc: 'Xabarchi REST API: аутентификация, отправка SMS и проверка прямо здесь.' },
     title: 'API документация',
     subtitle: 'Отправляйте SMS из любой системы через Xabarchi REST API. Базовый адрес: ',
-    nav: { intro: 'Введение', auth: 'Аутентификация', send: 'Отправка SMS', list: 'Список сообщений', status: 'Статус сообщения', devices: 'Устройства', telegram: 'Telegram-бот', webhooks: 'Вебхуки', errors: 'Ошибки' },
-    intro: {
-      body: 'Все запросы принимают и возвращают JSON. API-ключ создаётся в разделе «API» панели управления. Для тестов используйте ключ с префиксом xab_test_ — сообщения не отправляются, но ответы выглядят как настоящие.',
-    },
-    auth: { body: 'Добавляйте Bearer-токен в заголовок Authorization каждого запроса. Ключи бывают двух видов: xab_live_ (реальная отправка) и xab_test_ (тестовый режим).' },
-    send: { body: 'Отправка одного SMS. Если текст длиннее 160 символов (70 для кириллицы), он автоматически делится на сегменты.' },
-    list: { body: 'Список сообщений — с пагинацией и фильтром по статусу.' },
-    status: { body: 'Текущий статус одного сообщения. Статусы: queued → sending → sent → delivered или failed.' },
-    devices: { body: 'Список подключённых устройств: статус, батарея, сигнал и дневной лимит.' },
-    telegram: {
-      body: 'Telegram-бот — отдельный сервис: каждая компания подключает своего бота и отправляет подписчикам контент любого типа. Поле kind задаёт тип: text, photo, video, document или post (текст + inline-кнопки). Для медиа передаётся media_url, для поста — массив buttons. Ключу нужно право telegram.send.',
-      list: 'Список подписчиков — с пагинацией.',
-    },
-    webhooks: { body: 'При смене статуса сообщения мы отправляем POST на ваш URL. Каждый запрос подписан заголовком X-Xabarchi-Signature.' },
-    errors: { body: 'API использует стандартные HTTP-коды. В теле ошибки — поля code и message.' },
-    errorRows: [
-      ['400', 'invalid_request — параметр отсутствует или неверен'],
-      ['401', 'unauthorized — ключ неверен или отозван'],
-      ['402', 'quota_exceeded — месячный лимит SMS исчерпан'],
-      ['429', 'rate_limited — превышена частота запросов'],
-      ['503', 'no_device — нет активного устройства'],
+    nav: { intro: 'Введение', auth: 'Аутентификация', send: 'Отправка SMS', playground: 'Проверить', message: 'Объект сообщения', errors: 'Ошибки', limits: 'Лимиты' },
+    intro: 'Все запросы принимают и возвращают JSON. Поля — в camelCase. API-ключ создаётся в разделе «API» панели управления — он показывается один раз, храните его надёжно.',
+    getKey: 'Получить API-ключ',
+    auth: 'Добавляйте ключ в заголовок X-API-Key каждого запроса. Ключ начинается с xab_live_ и должен иметь право sms.send.',
+    send: 'Отправьте SMS на один или несколько номеров за один запрос. to — массив номеров. Текст длиннее 160 символов (70 для кириллицы) автоматически делится на сегменты, каждый считается отдельно.',
+    reqTitle: 'Тело запроса',
+    fields: [
+      ['to', 'string[]', 'Номер(а) получателей в международном формате. 1–500 шт.'],
+      ['text', 'string', 'Текст сообщения. 1–1000 символов.'],
+      ['priority', 'string', 'urgent · transactional · bulk (необязательно, по умолчанию: transactional).'],
+      ['deviceId', 'uuid?', 'Отправка с конкретного устройства (необязательно).'],
     ],
+    play: {
+      title: 'Проверьте прямо здесь',
+      body: 'Введите свой API-ключ и отправьте реальный запрос — ответ появится ниже. ⚠️ Отправляется НАСТОЯЩЕЕ SMS (нужны лимит и активное устройство).',
+      key: 'API-ключ (X-API-Key)',
+      to: 'Получатель(и) — через запятую',
+      text: 'Текст сообщения',
+      priority: 'Приоритет',
+      send: 'Отправить запрос',
+      sending: 'Отправка…',
+      result: 'Ответ',
+      needKey: 'Сначала введите API-ключ',
+    },
+    message: 'Успешный запрос возвращает 201 и массив созданных сообщений. Каждый объект сообщения содержит поля:',
+    msgFields: [
+      ['id', 'number', 'Идентификатор сообщения.'],
+      ['to', 'string', 'Номер получателя.'],
+      ['text', 'string', 'Отправленный текст.'],
+      ['status', 'string', 'queued → sending → sent → delivered или failed.'],
+      ['priority', 'string', 'urgent · transactional · bulk.'],
+      ['segments', 'number', 'Количество SMS-сегментов.'],
+      ['createdAt', 'datetime', 'Время создания (ISO 8601).'],
+      ['deliveredAt', 'datetime?', 'Время доставки (если delivered).'],
+      ['failReason', 'string?', 'Причина ошибки (если failed): no_sim, no_balance, ...'],
+    ],
+    errors: 'API использует стандартные HTTP-коды. В теле ошибки — поля code и message.',
+    errorRows: [
+      ['401', 'auth_error — ключ неверен, отсутствует или отозван'],
+      ['403', 'forbidden — у ключа нет права sms.send'],
+      ['402', 'quota_exceeded — месячный лимит SMS исчерпан'],
+      ['422', 'invalid_phone — неверный формат номера'],
+      ['429', 'rate_limited — более 30 запросов в минуту'],
+    ],
+    limits: 'Скорость отправки: 30 запросов в минуту на аккаунт. Месячный лимит SMS зависит от тарифа (бесплатно: 500/мес). Длинные сообщения, разбитые на сегменты, считаются по каждому сегменту.',
   },
   en: {
-    meta: { title: 'API docs — Xabarchi', desc: 'Xabarchi REST API: authentication, sending SMS, statuses, webhooks.' },
+    meta: { title: 'API docs — Xabarchi', desc: 'Xabarchi REST API: authentication, sending SMS, and try it right here.' },
     title: 'API documentation',
     subtitle: 'Send SMS from any system with the Xabarchi REST API. Base URL: ',
-    nav: { intro: 'Introduction', auth: 'Authentication', send: 'Send an SMS', list: 'List messages', status: 'Message status', devices: 'Devices', telegram: 'Telegram bot', webhooks: 'Webhooks', errors: 'Errors' },
-    intro: {
-      body: 'All endpoints accept and return JSON. Create an API key in the dashboard’s “API” section. For testing use a key with the xab_test_ prefix — nothing is sent, but responses look real.',
-    },
-    auth: { body: 'Pass a Bearer token in the Authorization header of every request. Keys come in two flavors: xab_live_ (real sending) and xab_test_ (test mode).' },
-    send: { body: 'Send a single SMS. Texts longer than 160 characters (70 for Cyrillic) are split into segments automatically.' },
-    list: { body: 'List messages — with pagination and a status filter.' },
-    status: { body: 'Get the current state of one message. States: queued → sending → sent → delivered or failed.' },
-    devices: { body: 'List connected devices: status, battery, signal and daily limit.' },
-    telegram: {
-      body: 'The Telegram bot is a standalone service: each company connects its own bot and pushes any kind of content to its subscribers. The kind field selects the type: text, photo, video, document or post (text + inline buttons). Media kinds take a media_url; posts take a buttons array. The key needs the telegram.send scope.',
-      list: 'List subscribers — with pagination.',
-    },
-    webhooks: { body: 'When a message changes state we POST to your URL. Every request is signed with the X-Xabarchi-Signature header.' },
-    errors: { body: 'The API uses standard HTTP codes. Error bodies carry code and message fields.' },
-    errorRows: [
-      ['400', 'invalid_request — a parameter is missing or malformed'],
-      ['401', 'unauthorized — the key is wrong or revoked'],
-      ['402', 'quota_exceeded — the monthly SMS quota is used up'],
-      ['429', 'rate_limited — too many requests'],
-      ['503', 'no_device — no active device available'],
+    nav: { intro: 'Introduction', auth: 'Authentication', send: 'Send an SMS', playground: 'Try it', message: 'Message object', errors: 'Errors', limits: 'Limits' },
+    intro: 'All endpoints accept and return JSON. Fields are camelCase. Create an API key in the dashboard’s “API” section — it is shown only once, so store it safely.',
+    getKey: 'Get an API key',
+    auth: 'Pass your key in the X-API-Key header of every request. Keys start with xab_live_ and must carry the sms.send scope.',
+    send: 'Send an SMS to one or more numbers in a single request. to is an array of numbers. Text longer than 160 characters (70 for Cyrillic) is split into segments automatically, each billed separately.',
+    reqTitle: 'Request body',
+    fields: [
+      ['to', 'string[]', 'Recipient number(s) in international format. 1–500.'],
+      ['text', 'string', 'Message text. 1–1000 characters.'],
+      ['priority', 'string', 'urgent · transactional · bulk (optional, default: transactional).'],
+      ['deviceId', 'uuid?', 'Send from a specific device (optional).'],
     ],
+    play: {
+      title: 'Try it right here',
+      body: 'Enter your API key and fire a real request — the response shows below. ⚠️ This sends a REAL SMS (needs quota and an active device).',
+      key: 'API key (X-API-Key)',
+      to: 'Recipient(s) — comma separated',
+      text: 'Message text',
+      priority: 'Priority',
+      send: 'Send request',
+      sending: 'Sending…',
+      result: 'Response',
+      needKey: 'Enter your API key first',
+    },
+    message: 'A successful request returns 201 and an array of created messages. Each message object has these fields:',
+    msgFields: [
+      ['id', 'number', 'Message id.'],
+      ['to', 'string', 'Recipient number.'],
+      ['text', 'string', 'The text that was sent.'],
+      ['status', 'string', 'queued → sending → sent → delivered or failed.'],
+      ['priority', 'string', 'urgent · transactional · bulk.'],
+      ['segments', 'number', 'Number of SMS segments.'],
+      ['createdAt', 'datetime', 'Creation time (ISO 8601).'],
+      ['deliveredAt', 'datetime?', 'Delivery time (if delivered).'],
+      ['failReason', 'string?', 'Failure reason (if failed): no_sim, no_balance, ...'],
+    ],
+    errors: 'The API uses standard HTTP codes. Error bodies carry code and message fields.',
+    errorRows: [
+      ['401', 'auth_error — the key is wrong, missing or revoked'],
+      ['403', 'forbidden — the key lacks the sms.send scope'],
+      ['402', 'quota_exceeded — the monthly SMS quota is used up'],
+      ['422', 'invalid_phone — malformed number'],
+      ['429', 'rate_limited — more than 30 requests per minute'],
+    ],
+    limits: 'Send rate: 30 requests per minute per account. The monthly SMS quota depends on your plan (free: 500/mo). Long messages split into segments are billed per segment.',
   },
 }
 
 type CodeLang = 'curl' | 'js' | 'python'
 
-const SEND_SNIPPETS: Record<CodeLang, { title: string; code: string }> = {
-  curl: {
-    title: 'curl',
-    code: `curl https://api.xabarchi.uz/v1/messages \\
-  -H "Authorization: Bearer xab_live_..." \\
+function sendSnippets(base: string): Record<CodeLang, { title: string; code: string }> {
+  return {
+    curl: {
+      title: 'curl',
+      code: `curl ${base}/public/messages \\
+  -H "X-API-Key: xab_live_..." \\
   -H "Content-Type: application/json" \\
   -d '{
-    "to": "+998901234567",
+    "to": ["+998901234567"],
     "text": "Tasdiqlash kodingiz: 48213",
-    "device_id": "dev_01"
+    "priority": "urgent"
   }'`,
-  },
-  js: {
-    title: 'JavaScript',
-    code: `const res = await fetch('https://api.xabarchi.uz/v1/messages', {
+    },
+    js: {
+      title: 'JavaScript',
+      code: `const res = await fetch('${base}/public/messages', {
   method: 'POST',
   headers: {
-    Authorization: 'Bearer xab_live_...',
+    'X-API-Key': 'xab_live_...',
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
-    to: '+998901234567',
+    to: ['+998901234567'],
     text: 'Tasdiqlash kodingiz: 48213',
+    priority: 'urgent',
   }),
 })
-const message = await res.json()
-// { id: 'sms_0421', status: 'queued', segments: 1 }`,
-  },
-  python: {
-    title: 'Python',
-    code: `import requests
+const messages = await res.json()
+// [{ id: 421, status: 'queued', segments: 1, ... }]`,
+    },
+    python: {
+      title: 'Python',
+      code: `import requests
 
 res = requests.post(
-    "https://api.xabarchi.uz/v1/messages",
-    headers={"Authorization": "Bearer xab_live_..."},
+    "${base}/public/messages",
+    headers={"X-API-Key": "xab_live_..."},
     json={
-        "to": "+998901234567",
+        "to": ["+998901234567"],
         "text": "Tasdiqlash kodingiz: 48213",
+        "priority": "urgent",
     },
 )
-print(res.json())
-# {'id': 'sms_0421', 'status': 'queued', 'segments': 1}`,
-  },
+print(res.json())`,
+    },
+  }
 }
+
+/* --------------------------------------------------------------- helpers */
 
 function Endpoint({ method, path }: { method: 'GET' | 'POST'; path: string }) {
   return (
@@ -143,6 +220,20 @@ function Endpoint({ method, path }: { method: 'GET' | 'POST'; path: string }) {
       <Badge tone={method === 'GET' ? 'info' : 'brand'} className="font-mono">{method}</Badge>
       <code className="font-mono text-[13px] text-ink">{path}</code>
     </p>
+  )
+}
+
+function FieldTable({ rows }: { rows: string[][] }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-line">
+      {rows.map(([name, type, desc], index) => (
+        <div key={name} className={cn('flex flex-col gap-1 px-4 py-3 sm:flex-row sm:gap-4', index % 2 === 1 && 'bg-sunken/50')}>
+          <code className="w-40 shrink-0 font-mono text-[13px] font-semibold text-brand-2 dark:text-brand">{name}</code>
+          <span className="w-20 shrink-0 font-mono text-[12px] text-ink-3">{type}</span>
+          <span className="text-[13px] leading-relaxed text-ink-2">{desc}</span>
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -157,6 +248,111 @@ function Section({ id, title, children }: { id: string; title: string; children:
   )
 }
 
+/* ------------------------------------------------------- try-it playground */
+
+type Priority = 'urgent' | 'transactional' | 'bulk'
+
+function Playground() {
+  const t = useT(dict)
+  const [apiKey, setApiKey] = useState('')
+  const [to, setTo] = useState('+998901234567')
+  const [text, setText] = useState('Xabarchi API test ✅')
+  const [priority, setPriority] = useState<Priority>('transactional')
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<{ status: number; ok: boolean; body: string } | null>(null)
+  const [error, setError] = useState<string>()
+
+  const run = async () => {
+    if (!apiKey.trim()) {
+      setError(t.play.needKey)
+      return
+    }
+    setError(undefined)
+    setLoading(true)
+    setResult(null)
+    try {
+      const res = await fetch(`${API_BASE}/public/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey.trim() },
+        body: JSON.stringify({
+          to: to.split(',').map((s) => s.trim()).filter(Boolean),
+          text,
+          priority,
+        }),
+      })
+      const raw = await res.text()
+      let pretty = raw
+      try {
+        pretty = JSON.stringify(JSON.parse(raw), null, 2)
+      } catch {
+        /* keep raw */
+      }
+      setResult({ status: res.status, ok: res.ok, body: pretty })
+    } catch (err) {
+      setResult({ status: 0, ok: false, body: String(err) })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-line bg-surface p-5">
+      <div className="grid gap-4">
+        <Input
+          type="password"
+          label={t.play.key}
+          placeholder="xab_live_..."
+          value={apiKey}
+          onChange={(e) => { setApiKey(e.target.value); setError(undefined) }}
+          error={error}
+          leading={<TerminalSquare className="size-4" />}
+          className="font-mono text-[13px]"
+        />
+        <Input
+          label={t.play.to}
+          placeholder="+998901234567, +998935557713"
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+          className="font-mono text-[13px]"
+        />
+        <Textarea label={t.play.text} value={text} onChange={(e) => setText(e.target.value)} rows={3} />
+        <div>
+          <p className="mb-1.5 text-[13px] font-medium text-ink-2">{t.play.priority}</p>
+          <SegmentedControl
+            size="sm"
+            value={priority}
+            onChange={setPriority}
+            segments={[
+              { value: 'urgent', label: 'urgent' },
+              { value: 'transactional', label: 'transactional' },
+              { value: 'bulk', label: 'bulk' },
+            ]}
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <Button loading={loading} onClick={run}>
+            <Play className="size-4" />
+            {loading ? t.play.sending : t.play.send}
+          </Button>
+          <code className="tnum truncate font-mono text-[11px] text-ink-3">POST {API_BASE}/public/messages</code>
+        </div>
+      </div>
+
+      {result && (
+        <div className="mt-5">
+          <p className="mb-2 flex items-center gap-2 text-[13px] font-medium text-ink-2">
+            {t.play.result}
+            <Badge tone={result.ok ? 'ok' : 'danger'} className="tnum font-mono">{result.status || 'ERR'}</Badge>
+          </p>
+          <CodeBlock title="JSON" code={result.body} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------- page */
+
 export default function DocsPage() {
   const t = useT(dict)
   usePageMeta(t.meta.title, t.meta.desc)
@@ -164,6 +360,7 @@ export default function DocsPage() {
   const [active, setActive] = useState('intro')
 
   const navItems = Object.entries(t.nav) as [string, string][]
+  const snippets = sendSnippets(API_BASE)
 
   return (
     <div className="mx-auto flex max-w-6xl gap-12 px-5 py-14">
@@ -190,23 +387,28 @@ export default function DocsPage() {
           <h1 className="font-display text-3xl font-semibold tracking-tight text-ink">{t.title}</h1>
           <p className="mt-3 text-[15px] leading-relaxed text-ink-2">
             {t.subtitle}
-            <code className="rounded-md bg-sunken px-1.5 py-0.5 font-mono text-[13px] text-brand-2 dark:text-brand">https://api.xabarchi.uz/v1</code>
+            <code className="break-all rounded-md bg-sunken px-1.5 py-0.5 font-mono text-[13px] text-brand-2 dark:text-brand">{API_BASE}</code>
           </p>
         </Reveal>
 
         <div className="mt-8">
           <Section id="intro" title={t.nav.intro}>
-            <p className="text-sm leading-relaxed text-ink-2">{t.intro.body}</p>
+            <p className="text-sm leading-relaxed text-ink-2">{t.intro}</p>
+            <Link to="/app/api" className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition-colors hover:text-brand-2">
+              {t.getKey} →
+            </Link>
           </Section>
 
           <Section id="auth" title={t.nav.auth}>
-            <p className="text-sm leading-relaxed text-ink-2">{t.auth.body}</p>
-            <CodeBlock title="Authorization" code={`Authorization: Bearer xab_live_7Kd2mQ9xRf4w...`} />
+            <p className="text-sm leading-relaxed text-ink-2">{t.auth}</p>
+            <CodeBlock title="Header" code={`X-API-Key: xab_live_7Kd2mQ9xRf4w...`} />
           </Section>
 
           <Section id="send" title={t.nav.send}>
-            <Endpoint method="POST" path="/v1/messages" />
-            <p className="text-sm leading-relaxed text-ink-2">{t.send.body}</p>
+            <Endpoint method="POST" path="/public/messages" />
+            <p className="text-sm leading-relaxed text-ink-2">{t.send}</p>
+            <p className="pt-1 text-[13px] font-semibold text-ink">{t.reqTitle}</p>
+            <FieldTable rows={t.fields} />
             <SegmentedControl
               size="sm"
               value={codeLang}
@@ -217,118 +419,37 @@ export default function DocsPage() {
                 { value: 'python', label: 'Python' },
               ]}
             />
-            <CodeBlock title={SEND_SNIPPETS[codeLang].title} code={SEND_SNIPPETS[codeLang].code} />
+            <CodeBlock title={snippets[codeLang].title} code={snippets[codeLang].code} />
           </Section>
 
-          <Section id="list" title={t.nav.list}>
-            <Endpoint method="GET" path="/v1/messages?status=delivered&limit=20" />
-            <p className="text-sm leading-relaxed text-ink-2">{t.list.body}</p>
-            <CodeBlock
-              title="200 OK"
-              code={`{
-  "data": [
-    {
-      "id": "sms_0421",
-      "to": "+998901234567",
-      "status": "delivered",
-      "device_id": "dev_01",
-      "segments": 1,
-      "created_at": "2026-07-16T09:41:03Z",
-      "delivered_at": "2026-07-16T09:41:09Z"
-    }
-  ],
-  "has_more": true,
-  "next_cursor": "c_9f2k"
-}`}
-            />
+          <Section id="playground" title={t.nav.playground}>
+            <p className="text-sm leading-relaxed text-ink-2">{t.play.body}</p>
+            <Playground />
           </Section>
 
-          <Section id="status" title={t.nav.status}>
-            <Endpoint method="GET" path="/v1/messages/{id}" />
-            <p className="text-sm leading-relaxed text-ink-2">{t.status.body}</p>
-          </Section>
-
-          <Section id="devices" title={t.nav.devices}>
-            <Endpoint method="GET" path="/v1/devices" />
-            <p className="text-sm leading-relaxed text-ink-2">{t.devices.body}</p>
+          <Section id="message" title={t.nav.message}>
+            <p className="text-sm leading-relaxed text-ink-2">{t.message}</p>
+            <FieldTable rows={t.msgFields} />
             <CodeBlock
-              title="200 OK"
-              code={`{
-  "data": [
-    {
-      "id": "dev_01",
-      "name": "Asosiy ofis",
-      "status": "online",
-      "battery": 84,
-      "signal": 4,
-      "sent_today": 412,
-      "daily_limit": 800
-    }
-  ]
-}`}
-            />
-          </Section>
-
-          <Section id="telegram" title={t.nav.telegram}>
-            <Endpoint method="POST" path="/v1/telegram/messages" />
-            <p className="text-sm leading-relaxed text-ink-2">{t.telegram.body}</p>
-            <CodeBlock
-              title="POST /v1/telegram/messages"
-              code={`curl https://api.xabarchi.uz/v1/telegram/messages \\
-  -H "Authorization: Bearer xab_live_..." \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "kind": "post",
-    "text": "Yangi filial ochildi!",
-    "media_url": "https://example.uz/filial.jpg",
-    "buttons": [
-      { "label": "Buyurtma berish", "url": "https://example.uz/order" }
-    ]
-  }'
-
-{
-  "id": "tg_0107",
-  "kind": "post",
-  "audience": 1284,
-  "status": "queued"
-}`}
-            />
-            <Endpoint method="GET" path="/v1/telegram/subscribers?limit=20" />
-            <p className="text-sm leading-relaxed text-ink-2">{t.telegram.list}</p>
-            <CodeBlock
-              title="200 OK"
-              code={`{
-  "data": [
-    {
-      "id": "sub_01",
-      "name": "Aziz Karimov",
-      "username": "aziz_uz",
-      "joined_at": "2026-07-02T14:11:08Z"
-    }
-  ],
-  "has_more": true,
-  "next_cursor": "c_4h8s"
-}`}
-            />
-          </Section>
-
-          <Section id="webhooks" title={t.nav.webhooks}>
-            <p className="text-sm leading-relaxed text-ink-2">{t.webhooks.body}</p>
-            <CodeBlock
-              title="POST https://example.uz/webhooks/xabarchi"
-              code={`{
-  "event": "message.delivered",
-  "data": {
-    "id": "sms_0421",
+              title="201 Created"
+              code={`[
+  {
+    "id": 421,
     "to": "+998901234567",
-    "delivered_at": "2026-07-16T09:41:09Z"
+    "text": "Tasdiqlash kodingiz: 48213",
+    "status": "queued",
+    "priority": "urgent",
+    "segments": 1,
+    "createdAt": "2026-08-16T09:41:03Z",
+    "deliveredAt": null,
+    "failReason": null
   }
-}`}
+]`}
             />
           </Section>
 
           <Section id="errors" title={t.nav.errors}>
-            <p className="text-sm leading-relaxed text-ink-2">{t.errors.body}</p>
+            <p className="text-sm leading-relaxed text-ink-2">{t.errors}</p>
             <div className="overflow-hidden rounded-xl border border-line">
               {t.errorRows.map(([code, description], index) => (
                 <div key={code} className={cn('flex items-start gap-4 px-4 py-3 text-sm', index % 2 === 1 && 'bg-sunken/50')}>
@@ -337,6 +458,10 @@ export default function DocsPage() {
                 </div>
               ))}
             </div>
+          </Section>
+
+          <Section id="limits" title={t.nav.limits}>
+            <p className="text-sm leading-relaxed text-ink-2">{t.limits}</p>
           </Section>
         </div>
       </div>
