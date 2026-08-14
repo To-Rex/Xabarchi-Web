@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 import {
   AnimatePresence,
@@ -312,6 +312,114 @@ function StageTicks({ stage }: { stage: SimMessage['stage'] }) {
 // Module-level so a StrictMode remount never reuses an id (duplicate keys)
 let simMessageId = 0
 
+/**
+ * The app's signature ON ring, recreated pixel-faithfully on a canvas:
+ * a breathing glow, 16 dots scattering outward along a wavy (sinusoidal)
+ * trajectory, a thin base ring and a rotating sweep-gradient arc — the exact
+ * maths from the Android StatusRing composable.
+ */
+const RING_PRIMARY = [14, 148, 136] // #0e9488
+const RING_SECONDARY = [10, 110, 102] // #0a6e66
+const RING_BRIGHT = [44, 199, 184] // #2cc7b8
+const rgba = (c: number[], a: number) => `rgba(${c[0]},${c[1]},${c[2]},${a})`
+const lerpRgb = (a: number[], b: number[], t: number) => a.map((v, i) => v + (b[i] - v) * t)
+
+function StatusRing({ size }: { size: number }) {
+  const ref = useRef<HTMLCanvasElement>(null)
+  const reduceMotion = useReducedMotion()
+
+  useEffect(() => {
+    const canvas = ref.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    canvas.width = size * dpr
+    canvas.height = size * dpr
+    ctx.scale(dpr, dpr)
+
+    const cx = size / 2
+    const cy = size / 2
+    const R = size / 2
+    const k = size / 224 // scale factor vs the app's 224dp canvas
+    let raf = 0
+
+    const frame = (elapsed: number) => {
+      const rotation = ((elapsed / 3200) % 1) * Math.PI * 2
+      const pulse = (elapsed / 2400) % 1
+      const breathe = 0.5 - 0.5 * Math.cos((elapsed / 2600) * Math.PI * 2)
+
+      ctx.clearRect(0, 0, size, size)
+
+      // breathing glow
+      const glowAlpha = 0.1 + 0.14 * breathe
+      const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, R)
+      glow.addColorStop(0, rgba(RING_PRIMARY, glowAlpha))
+      glow.addColorStop(1, rgba(RING_PRIMARY, 0))
+      ctx.fillStyle = glow
+      ctx.beginPath()
+      ctx.arc(cx, cy, R, 0, Math.PI * 2)
+      ctx.fill()
+
+      // 16 dots scattering outward on a wavy path
+      const count = 16
+      for (let i = 0; i < count; i++) {
+        const phase = (pulse + i / count) % 1
+        const baseAngle = (360 / count) * i
+        const wave = Math.sin(phase * Math.PI * 3 + i) * 16 * phase
+        const ang = ((baseAngle + wave) * Math.PI) / 180
+        const dist = R * 0.44 + R * 0.52 * phase
+        const x = cx + Math.cos(ang) * dist
+        const y = cy + Math.sin(ang) * dist
+        const alpha = (1 - phase) * 0.9
+        const dotR = (1.3 + 2.4 * (1 - phase)) * k * 1.35
+        ctx.fillStyle = rgba(lerpRgb(RING_BRIGHT, RING_PRIMARY, phase), alpha)
+        ctx.beginPath()
+        ctx.arc(x, y, Math.max(0.6, dotR), 0, Math.PI * 2)
+        ctx.fill()
+      }
+
+      // thin static base ring
+      ctx.strokeStyle = rgba(RING_PRIMARY, 0.25)
+      ctx.lineWidth = 3 * k
+      ctx.beginPath()
+      ctx.arc(cx, cy, R * 0.62, 0, Math.PI * 2)
+      ctx.stroke()
+
+      // rotating sweep-gradient arc (the main modern effect)
+      const anyCtx = ctx as unknown as { createConicGradient?: (a: number, x: number, y: number) => CanvasGradient }
+      if (anyCtx.createConicGradient) {
+        const conic = anyCtx.createConicGradient(rotation, cx, cy)
+        conic.addColorStop(0, rgba(RING_PRIMARY, 0))
+        conic.addColorStop(0.25, rgba(RING_SECONDARY, 0))
+        conic.addColorStop(0.5, rgba(RING_BRIGHT, 0.95))
+        conic.addColorStop(0.75, rgba(RING_PRIMARY, 0.95))
+        conic.addColorStop(1, rgba(RING_PRIMARY, 0))
+        ctx.strokeStyle = conic
+        ctx.lineWidth = 5 * k
+        ctx.lineCap = 'round'
+        ctx.beginPath()
+        ctx.arc(cx, cy, R * 0.62, 0, Math.PI * 2)
+        ctx.stroke()
+      }
+    }
+
+    if (reduceMotion) {
+      frame(0)
+      return
+    }
+    const start = performance.now()
+    const loop = (t: number) => {
+      frame(t - start)
+      raf = requestAnimationFrame(loop)
+    }
+    raf = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(raf)
+  }, [size, reduceMotion])
+
+  return <canvas ref={ref} style={{ width: size, height: size }} className="absolute inset-0" aria-hidden />
+}
+
 function HeroPhone({ ui }: { ui: Record<string, string> }) {
   const [items, setItems] = useState<SimMessage[]>([])
   const [sentToday, setSentToday] = useState(128)
@@ -476,34 +584,11 @@ function HeroPhone({ ui }: { ui: Record<string, string> }) {
                       <p className="tnum text-[7.5px] text-ink-3">≈ 48 Mbps</p>
                     </div>
                   </div>
-                  <div className="relative flex size-[116px] items-center justify-center">
-                    {!reduceMotion &&
-                      [0, 1].map((i) => (
-                        <motion.span
-                          key={i}
-                          aria-hidden
-                          className="absolute size-full rounded-full border-2 border-brand"
-                          animate={{ scale: [0.85, 1.65], opacity: [0.45, 0] }}
-                          transition={{ duration: 2.4, repeat: Infinity, delay: i * 1.2, ease: 'easeOut' }}
-                        />
-                      ))}
+                  <div className="relative flex size-[132px] items-center justify-center">
+                    <StatusRing size={132} />
                     <motion.div
-                      aria-hidden
-                      className="absolute size-full"
-                      animate={reduceMotion ? undefined : { rotate: 360 }}
-                      transition={{ duration: 9, repeat: Infinity, ease: 'linear' }}
-                    >
-                      {[0, 60, 120, 180, 240, 300].map((a) => (
-                        <span
-                          key={a}
-                          className="absolute left-1/2 top-1/2 size-1.5 rounded-full bg-brand-2"
-                          style={{ transform: `rotate(${a}deg) translateY(-58px)` }}
-                        />
-                      ))}
-                    </motion.div>
-                    <motion.div
-                      className="relative flex size-[82px] items-center justify-center rounded-full bg-gradient-to-b from-brand to-brand-2 shadow-pop"
-                      animate={reduceMotion ? undefined : { scale: [1, 1.04, 1] }}
+                      className="relative z-10 flex size-[78px] items-center justify-center rounded-full bg-gradient-to-b from-brand to-brand-2 shadow-pop"
+                      animate={reduceMotion ? undefined : { scale: [1, 1.03, 1] }}
                       transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
                     >
                       <Power className="size-7 text-brand-ink" strokeWidth={2.4} />
