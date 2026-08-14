@@ -12,17 +12,24 @@ import {
 import {
   ArrowRight,
   BarChart3,
+  BatteryFull,
   Bot,
   Braces,
   FileText,
   Image,
+  Inbox,
+  Power,
   QrCode,
   PlayCircle,
   Send,
+  Settings,
   ShieldCheck,
+  SignalHigh,
   Smartphone,
   Sparkles,
   Users,
+  Wifi,
+  Zap,
 } from 'lucide-react'
 import { useLang, useT } from '@/shared/i18n'
 import { formatCompact } from '@/shared/lib/format'
@@ -44,6 +51,12 @@ const dict = {
       note: 'Kredit karta shart emas · 500 SMS/oy bepul',
       phoneApp: 'Xabarchi Android',
       dashboardChip: 'Boshqaruv paneli',
+      phoneStatus: 'Ishlayapti',
+      phoneSent: 'Bugun',
+      phoneBattery: 'Batareya',
+      phoneSignal: 'Signal',
+      phoneQueue: 'Navbat',
+      phoneHistory: 'Tarix',
     },
     how: {
       eyebrow: 'Qanday ishlaydi',
@@ -117,6 +130,12 @@ const dict = {
       note: 'Без кредитной карты · 500 SMS/мес бесплатно',
       phoneApp: 'Xabarchi Android',
       dashboardChip: 'Панель управления',
+      phoneStatus: 'Работает',
+      phoneSent: 'Сегодня',
+      phoneBattery: 'Батарея',
+      phoneSignal: 'Сигнал',
+      phoneQueue: 'Очередь',
+      phoneHistory: 'История',
     },
     how: {
       eyebrow: 'Как это работает',
@@ -190,6 +209,12 @@ const dict = {
       note: 'No credit card required · 500 SMS/mo free',
       phoneApp: 'Xabarchi Android',
       dashboardChip: 'Dashboard',
+      phoneStatus: 'Running',
+      phoneSent: 'Today',
+      phoneBattery: 'Battery',
+      phoneSignal: 'Signal',
+      phoneQueue: 'Queue',
+      phoneHistory: 'History',
     },
     how: {
       eyebrow: 'How it works',
@@ -284,10 +309,12 @@ function StageTicks({ stage }: { stage: SimMessage['stage'] }) {
 // Module-level so a StrictMode remount never reuses an id (duplicate keys)
 let simMessageId = 0
 
-function HeroPhone({ appName, dashboardChip }: { appName: string; dashboardChip: string }) {
+function HeroPhone({ ui }: { ui: Record<string, string> }) {
   const [items, setItems] = useState<SimMessage[]>([])
+  const [sentToday, setSentToday] = useState(128)
   const [hovered, setHovered] = useState(false)
   const reduceMotion = useReducedMotion()
+  const dailyLimit = 800
 
   // 3D tilt: cursor position over the mock, normalized to [-0.5, 0.5]
   const mx = useMotionValue(0)
@@ -325,7 +352,10 @@ function HeroPhone({ appName, dashboardChip }: { appName: string; dashboardChip:
       setItems((prev) => [...prev.slice(-4), { id: msgId, ...seed, stage: 0 }])
       timers.push(
         setTimeout(() => setItems((prev) => prev.map((m) => (m.id === msgId ? { ...m, stage: 1 } : m))), 1100),
-        setTimeout(() => setItems((prev) => prev.map((m) => (m.id === msgId ? { ...m, stage: 2 } : m))), 2300),
+        setTimeout(() => {
+          setItems((prev) => prev.map((m) => (m.id === msgId ? { ...m, stage: 2 } : m)))
+          setSentToday((n) => n + 1) // a delivery ticks the "sent today" counter
+        }, 2300),
         setTimeout(spawn, 3000),
       )
     }
@@ -353,7 +383,7 @@ function HeroPhone({ appName, dashboardChip }: { appName: string; dashboardChip:
         className="absolute -left-2 top-6 z-10 hidden items-center gap-2 rounded-xl border border-line bg-raised px-3 py-2 shadow-card sm:flex"
       >
         <span className="size-2 rounded-full bg-brand" />
-        <span className="text-xs font-medium text-ink-2">{dashboardChip}</span>
+        <span className="text-xs font-medium text-ink-2">{ui.dashboardChip}</span>
       </motion.div>
 
       {/* dashed feed line into the phone */}
@@ -421,35 +451,125 @@ function HeroPhone({ appName, dashboardChip }: { appName: string; dashboardChip:
                     </svg>
                   </span>
                 </div>
-                {/* app header */}
-                <div className="mt-2.5 flex items-center gap-2.5 rounded-2xl bg-surface px-3.5 py-3 shadow-card">
-                  <span className="flex size-8 items-center justify-center rounded-xl bg-brand">
-                    <Send className="size-4 text-brand-ink" />
+                {/* app top bar */}
+                <div className="mt-1.5 flex items-center gap-2">
+                  <span className="flex size-7 items-center justify-center rounded-[9px] bg-brand shadow-card">
+                    <Send className="size-3.5 text-brand-ink" />
                   </span>
-                  <div className="flex-1">
-                    <p className="text-[13px] font-semibold leading-tight text-ink">{appName}</p>
-                    <p className="flex items-center gap-1.5 text-[11px] text-ok">
-                      <span className="size-1.5 rounded-full bg-ok" />
-                      Gateway aktiv
+                  <div className="flex-1 leading-tight">
+                    <p className="text-[13px] font-bold text-ink">Xabarchi</p>
+                    <p className="text-[9px] text-ink-3">Galaxy A54</p>
+                  </div>
+                  <Inbox className="size-4 text-ink-3" />
+                  <Settings className="size-4 text-ink-3" />
+                </div>
+
+                {/* on/off ring — the app's signature control */}
+                <div className="relative mt-3 flex flex-col items-center">
+                  <div className="absolute left-0 top-0 flex items-center gap-1.5 rounded-lg bg-surface/90 px-2 py-1 shadow-card">
+                    <Wifi className="size-3 text-ok" />
+                    <div className="leading-none">
+                      <p className="text-[8.5px] font-semibold text-ink">Wi-Fi</p>
+                      <p className="tnum text-[7.5px] text-ink-3">≈ 48 Mbps</p>
+                    </div>
+                  </div>
+                  <div className="relative flex size-[116px] items-center justify-center">
+                    {!reduceMotion &&
+                      [0, 1].map((i) => (
+                        <motion.span
+                          key={i}
+                          aria-hidden
+                          className="absolute size-full rounded-full border-2 border-brand"
+                          animate={{ scale: [0.85, 1.65], opacity: [0.45, 0] }}
+                          transition={{ duration: 2.4, repeat: Infinity, delay: i * 1.2, ease: 'easeOut' }}
+                        />
+                      ))}
+                    <motion.div
+                      aria-hidden
+                      className="absolute size-full"
+                      animate={reduceMotion ? undefined : { rotate: 360 }}
+                      transition={{ duration: 9, repeat: Infinity, ease: 'linear' }}
+                    >
+                      {[0, 60, 120, 180, 240, 300].map((a) => (
+                        <span
+                          key={a}
+                          className="absolute left-1/2 top-1/2 size-1.5 rounded-full bg-brand-2"
+                          style={{ transform: `rotate(${a}deg) translateY(-58px)` }}
+                        />
+                      ))}
+                    </motion.div>
+                    <motion.div
+                      className="relative flex size-[82px] items-center justify-center rounded-full bg-gradient-to-b from-brand to-brand-2 shadow-pop"
+                      animate={reduceMotion ? undefined : { scale: [1, 1.04, 1] }}
+                      transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                    >
+                      <Power className="size-7 text-brand-ink" strokeWidth={2.4} />
+                    </motion.div>
+                  </div>
+                  <p className="mt-2 flex items-center gap-1.5 text-[12px] font-semibold text-brand">
+                    <span className="size-1.5 animate-pulse-soft rounded-full bg-brand" />
+                    {ui.phoneStatus}
+                  </p>
+                </div>
+
+                {/* three symmetric stat cards */}
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <div className="rounded-xl bg-surface p-2 shadow-card">
+                    <Zap className="size-3.5 text-brand" />
+                    <p className="mt-1 text-[8px] text-ink-3">{ui.phoneSent}</p>
+                    <p className="tnum text-[13px] font-bold leading-none text-ink">
+                      <AnimatedNumber value={sentToday} format={(v) => String(Math.round(v))} />
+                      <span className="text-[8px] font-medium text-ink-3"> / {dailyLimit}</span>
                     </p>
+                    <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-sunken">
+                      <div className="h-full rounded-full bg-brand" style={{ width: `${Math.min(100, (sentToday / dailyLimit) * 100)}%` }} />
+                    </div>
+                  </div>
+                  <div className="rounded-xl bg-surface p-2 shadow-card">
+                    <BatteryFull className="size-3.5 text-ok" />
+                    <p className="mt-1 text-[8px] text-ink-3">{ui.phoneBattery}</p>
+                    <p className="tnum mt-0.5 text-[17px] font-bold leading-none text-ink">84%</p>
+                  </div>
+                  <div className="rounded-xl bg-surface p-2 shadow-card">
+                    <SignalHigh className="size-3.5 text-gold" />
+                    <p className="mt-1 text-[8px] text-ink-3">{ui.phoneSignal}</p>
+                    <p className="tnum mt-0.5 text-[17px] font-bold leading-none text-ink">4/4</p>
                   </div>
                 </div>
-                {/* live message feed */}
-                <div className="mt-3 flex h-[440px] flex-col justify-end gap-2 overflow-hidden">
+
+                {/* queue / history tabs */}
+                <div className="mt-3 flex gap-0.5 rounded-xl bg-sunken p-0.5 text-[10px] font-semibold">
+                  <span className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-surface py-1 text-ink shadow-card">
+                    {ui.phoneQueue}
+                    <span className="tnum rounded-full bg-brand/15 px-1.5 text-[8.5px] text-brand">{items.filter((m) => m.stage < 2).length}</span>
+                  </span>
+                  <span className="flex-1 py-1 text-center text-ink-3">{ui.phoneHistory}</span>
+                </div>
+
+                {/* live queue list — app LogCard style */}
+                <div className="mt-2 flex h-[142px] flex-col gap-1.5 overflow-hidden">
                   <AnimatePresence initial={false}>
-                    {items.map((message) => (
+                    {[...items].reverse().slice(0, 3).map((message) => (
                       <motion.div
                         key={message.id}
                         layout
-                        initial={{ opacity: 0, y: 22, scale: 0.96 }}
+                        initial={{ opacity: 0, y: -16, scale: 0.96 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -14, scale: 0.97 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
                         transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-                        className="rounded-2xl rounded-br-md bg-surface p-3 shadow-card"
+                        className="rounded-xl border border-line bg-surface p-2.5 shadow-card"
                       >
-                        <p className="font-mono text-[11px] text-ink-3">{message.to}</p>
-                        <p className="mt-1 text-[12.5px] leading-snug text-ink">{message.text}</p>
-                        <div className="mt-1.5 flex items-center justify-end gap-1 text-[10px] text-ink-3">
+                        <div className="flex items-center justify-between">
+                          <p className="tnum font-mono text-[10px] text-ink-3">{message.to}</p>
+                          <span className={cn(
+                            'rounded-md px-1.5 py-0.5 text-[7.5px] font-semibold',
+                            message.stage === 0 ? 'bg-gold-soft text-gold' : message.stage === 1 ? 'bg-brand-soft text-brand' : 'bg-ok-soft text-ok',
+                          )}>
+                            {message.stage === 0 ? ui.phoneQueue : message.stage === 1 ? 'SMS' : '✓✓'}
+                          </span>
+                        </div>
+                        <p className="mt-1 line-clamp-1 text-[11.5px] leading-snug text-ink">{message.text}</p>
+                        <div className="mt-1 flex items-center justify-end gap-1 text-[9px] text-ink-3">
                           <span className="tnum">09:41</span>
                           <StageTicks stage={message.stage} />
                         </div>
@@ -458,7 +578,7 @@ function HeroPhone({ appName, dashboardChip }: { appName: string; dashboardChip:
                   </AnimatePresence>
                 </div>
                 {/* home indicator */}
-                <div aria-hidden className="mx-auto mt-2 h-1 w-28 rounded-full bg-ink/25" />
+                <div aria-hidden className="mx-auto mt-1.5 h-1 w-24 rounded-full bg-ink/25" />
               </div>
               {/* cursor-following glass glare */}
               <motion.div
@@ -563,7 +683,7 @@ export default function HomePage() {
             </motion.p>
           </div>
 
-          <HeroPhone appName={t.hero.phoneApp} dashboardChip={t.hero.dashboardChip} />
+          <HeroPhone ui={t.hero} />
         </div>
       </section>
 
