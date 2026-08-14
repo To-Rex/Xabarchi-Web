@@ -42,7 +42,11 @@ export function SocialAuth() {
   const continueWith = (provider: Provider) => {
     if (loadingProvider) return
     setLoadingProvider(provider)
-    window.location.href = `${API_BASE}/auth/oauth/${provider}/start`
+    // Tell the backend where to hand the tokens back to (this exact origin) so
+    // localhost and the deployed site each return to themselves. The backend
+    // allow-lists it against CORS_ORIGINS.
+    const redirect = encodeURIComponent(window.location.origin)
+    window.location.href = `${API_BASE}/auth/oauth/${provider}/start?redirect=${redirect}`
   }
 
   return (
