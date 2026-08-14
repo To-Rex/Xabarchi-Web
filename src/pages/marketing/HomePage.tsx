@@ -48,6 +48,7 @@ const dict = {
       ctaPrimary: 'Bepul boshlash',
       ctaDemo: 'Jonli demo',
       ctaSecondary: "API hujjatlari",
+      ctaApp: 'Mobil ilova',
       note: 'Kredit karta shart emas · 500 SMS/oy bepul',
       phoneApp: 'Xabarchi Android',
       dashboardChip: 'Boshqaruv paneli',
@@ -127,6 +128,7 @@ const dict = {
       ctaPrimary: 'Начать бесплатно',
       ctaDemo: 'Живое демо',
       ctaSecondary: 'API документация',
+      ctaApp: 'Приложение',
       note: 'Без кредитной карты · 500 SMS/мес бесплатно',
       phoneApp: 'Xabarchi Android',
       dashboardChip: 'Панель управления',
@@ -206,6 +208,7 @@ const dict = {
       ctaPrimary: 'Start for free',
       ctaDemo: 'Live demo',
       ctaSecondary: 'API docs',
+      ctaApp: 'Mobile app',
       note: 'No credit card required · 500 SMS/mo free',
       phoneApp: 'Xabarchi Android',
       dashboardChip: 'Dashboard',
@@ -660,10 +663,10 @@ export default function HomePage() {
                   <ArrowRight className="size-4" />
                 </Button>
               </Link>
-              <Link to="/docs">
+              <Link to="/mobile">
                 <Button size="lg" variant="secondary">
-                  <Braces className="size-4" />
-                  {t.hero.ctaSecondary}
+                  <Smartphone className="size-4" />
+                  {t.hero.ctaApp}
                 </Button>
               </Link>
               <Link to="/demo">

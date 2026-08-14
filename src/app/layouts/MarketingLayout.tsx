@@ -78,7 +78,6 @@ export function MarketingLayout() {
 
   const links = [
     { to: '/#features', label: t.nav.product, hash: true },
-    { to: '/mobile', label: t.nav.app },
     { to: '/pricing', label: t.nav.pricing },
     { to: '/docs', label: t.nav.docs },
     { to: '/faq', label: t.nav.faq },
