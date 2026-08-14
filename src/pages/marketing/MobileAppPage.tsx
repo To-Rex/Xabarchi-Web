@@ -6,12 +6,14 @@ import {
   ArrowRight,
   BatteryFull,
   Bell,
+  ChevronDown,
   Flashlight,
   Globe,
   Inbox,
   Languages,
   Monitor,
   Moon,
+  Phone,
   Plus,
   Power,
   QrCode,
@@ -58,15 +60,26 @@ const dict = {
     pair: {
       eyebrow: 'QR orqali ulash',
       title: 'Qurilmani QR kod bilan ulang',
-      body: 'Saytdagi panelda QR kod chiqadi, telefondagi ilova bilan uni skaner qilasiz — qurilma bir zumda hisobingizga bog‘lanadi.',
+      body: 'Saytdagi panelda QR kod chiqadi, ilovada telefon raqami va operatorni kiritib uni skaner qilasiz — qurilma bir zumda hisobingizga bog‘lanadi.',
       steps: [
-        { title: 'Panelda “Qurilma qo‘shish”', body: 'Saytda /app/devices sahifasiga kiring va “Qurilma qo‘shish” tugmasini bosing — ekranda QR kod paydo bo‘ladi.' },
-        { title: 'Ilovada skanerni oching', body: 'Telefonda Xabarchi ilovasini oching → “Qurilma ulash” → QR skanerni tanlang. Kamera ochiladi.' },
-        { title: 'Kodni skaner qiling', body: 'QR kodni ramka ichiga joylang. Ulangач panel “ulandi” deb ko‘rsatadi va telefon shlyuzga aylanadi.' },
+        { title: 'Panelda “Qurilma qo‘shish”', body: 'Saytda /app/devices sahifasida “Qurilma qo‘shish” tugmasini bosing — ekranda QR kod paydo bo‘ladi.' },
+        { title: 'Ilovada ma’lumot kiriting', body: 'Ilovada telefon raqami va operatoringizni kiriting, so‘ng “QR kodni skanerlash”ni bosing.' },
+        { title: 'Kodni skaner qiling', body: 'Kamerani paneldagi QR kodga to‘g‘rilang. Ulangач qurilma shlyuzga aylanadi.' },
       ],
       browserUrl: 'xabarchi.uz/app/devices',
-      browserTitle: 'Qurilma qo‘shish',
+      devicesTitle: 'Qurilmalar',
+      devicesSubtitle: 'SMS shlyuz sifatida ishlayotgan telefonlaringiz.',
+      addBtn: 'Qurilma qo‘shish',
       waiting: 'Telefonni kutmoqda…',
+      pairTitle: 'Qurilmani ulash',
+      pairSubtitle: 'Bir soniyada telefoningizni SMS shlyuziga aylantiring',
+      scanCard: 'QR kodni skanerlash',
+      scanCardHint: 'Paneldagi QR kodni ko‘rsating',
+      deviceInfo: 'Qurilma ma’lumotlari',
+      deviceName: 'Qurilma nomi',
+      phone: 'Telefon raqami',
+      operator: 'Operator',
+      connect: 'Qurilmani ulash',
       scanTitle: 'QR kodni skaner qiling',
       scanHint: 'Kodni ramka ichiga joylang',
     },
@@ -150,15 +163,26 @@ const dict = {
     pair: {
       eyebrow: 'Подключение по QR',
       title: 'Подключите устройство по QR-коду',
-      body: 'В панели на сайте появляется QR-код, а приложение на телефоне его сканирует — устройство мгновенно привязывается к аккаунту.',
+      body: 'В панели появляется QR-код; в приложении вы вводите номер и оператора и сканируете его — устройство мгновенно привязывается к аккаунту.',
       steps: [
-        { title: 'В панели «Добавить устройство»', body: 'Откройте на сайте /app/devices и нажмите «Добавить устройство» — на экране появится QR-код.' },
-        { title: 'Откройте сканер в приложении', body: 'В приложении Xabarchi: «Подключить устройство» → выберите QR-сканер. Откроется камера.' },
-        { title: 'Отсканируйте код', body: 'Наведите рамку на QR-код. После подключения панель покажет «подключено», а телефон станет шлюзом.' },
+        { title: 'В панели «Добавить устройство»', body: 'На сайте /app/devices нажмите «Добавить устройство» — на экране появится QR-код.' },
+        { title: 'Введите данные в приложении', body: 'В приложении укажите номер телефона и оператора, затем нажмите «Сканировать QR-код».' },
+        { title: 'Отсканируйте код', body: 'Наведите камеру на QR-код из панели. После подключения телефон станет шлюзом.' },
       ],
       browserUrl: 'xabarchi.uz/app/devices',
-      browserTitle: 'Добавить устройство',
+      devicesTitle: 'Устройства',
+      devicesSubtitle: 'Телефоны, работающие как ваши SMS-шлюзы.',
+      addBtn: 'Добавить устройство',
       waiting: 'Ожидание телефона…',
+      pairTitle: 'Подключить устройство',
+      pairSubtitle: 'За секунду превратите телефон в SMS-шлюз',
+      scanCard: 'Сканировать QR-код',
+      scanCardHint: 'Покажите QR-код из панели',
+      deviceInfo: 'Данные устройства',
+      deviceName: 'Название устройства',
+      phone: 'Номер телефона',
+      operator: 'Оператор',
+      connect: 'Подключить устройство',
       scanTitle: 'Отсканируйте QR-код',
       scanHint: 'Наведите рамку на код',
     },
@@ -242,15 +266,26 @@ const dict = {
     pair: {
       eyebrow: 'Pairing by QR',
       title: 'Connect a device with a QR code',
-      body: 'The dashboard shows a QR code and the phone app scans it — the device links to your account instantly.',
+      body: 'The dashboard shows a QR code; in the app you enter the phone number and operator, then scan it — the device links to your account instantly.',
       steps: [
-        { title: 'Dashboard “Add device”', body: 'Open /app/devices on the site and press “Add device” — a QR code appears on screen.' },
-        { title: 'Open the scanner in the app', body: 'In the Xabarchi app: “Connect device” → choose the QR scanner. The camera opens.' },
-        { title: 'Scan the code', body: 'Line the frame up with the QR code. Once paired, the dashboard shows “connected” and the phone becomes a gateway.' },
+        { title: 'Dashboard “Add device”', body: 'On /app/devices press “Add device” — a QR code appears on screen.' },
+        { title: 'Enter details in the app', body: 'In the app, type the phone number and pick your operator, then tap “Scan QR code”.' },
+        { title: 'Scan the code', body: 'Point the camera at the dashboard’s QR code. Once paired, the phone becomes a gateway.' },
       ],
       browserUrl: 'xabarchi.uz/app/devices',
-      browserTitle: 'Add device',
+      devicesTitle: 'Devices',
+      devicesSubtitle: 'The phones running as your SMS gateways.',
+      addBtn: 'Add device',
       waiting: 'Waiting for the phone…',
+      pairTitle: 'Connect device',
+      pairSubtitle: 'Turn your phone into an SMS gateway in a second',
+      scanCard: 'Scan QR code',
+      scanCardHint: 'Show the QR code from the dashboard',
+      deviceInfo: 'Device details',
+      deviceName: 'Device name',
+      phone: 'Phone number',
+      operator: 'Operator',
+      connect: 'Connect device',
       scanTitle: 'Scan the QR code',
       scanHint: 'Line the frame up with the code',
     },
@@ -622,10 +657,15 @@ function QrGlyph({ size = 128 }: { size?: number }) {
   )
 }
 
-/** The dashboard side: a browser window showing the “Add device” QR modal. */
-function PairBrowser({ labels }: { labels: { browserUrl: string; browserTitle: string; waiting: string } }) {
+/** The dashboard side: the real /app/devices page with the Add-device QR modal. */
+function PairBrowser({
+  labels,
+}: {
+  labels: { browserUrl: string; devicesTitle: string; devicesSubtitle: string; addBtn: string; waiting: string }
+}) {
   return (
     <div className="w-full max-w-[400px] overflow-hidden rounded-2xl border border-line bg-surface shadow-pop">
+      {/* browser chrome */}
       <div className="flex items-center gap-2 border-b border-line bg-sunken px-3.5 py-2.5">
         <span className="flex gap-1.5">
           <span className="size-2.5 rounded-full bg-danger/70" />
@@ -637,26 +677,120 @@ function PairBrowser({ labels }: { labels: { browserUrl: string; browserTitle: s
           <span className="tnum truncate font-mono text-[11px] text-ink-3">{labels.browserUrl}</span>
         </div>
       </div>
-      <div className="flex flex-col items-center px-6 py-7 text-center">
-        <div className="flex items-center gap-1.5 self-start rounded-lg bg-brand-soft px-2.5 py-1 text-[12px] font-semibold text-brand">
-          <Plus className="size-3.5" />
-          {labels.browserTitle}
+      {/* the devices page, dimmed under the modal */}
+      <div className="relative min-h-[300px] bg-bg p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="font-display text-base font-bold text-ink">{labels.devicesTitle}</p>
+            <p className="mt-0.5 text-[11px] text-ink-3">{labels.devicesSubtitle}</p>
+          </div>
+          <span className="flex shrink-0 items-center gap-1 rounded-lg bg-brand px-2.5 py-1.5 text-[11px] font-semibold text-brand-ink">
+            <Plus className="size-3" />
+            {labels.addBtn}
+          </span>
         </div>
-        <div className="relative mt-5 overflow-hidden rounded-xl border border-line p-2">
-          <QrGlyph size={132} />
-          <motion.span
-            aria-hidden
-            className="absolute inset-x-3 h-0.5 rounded-full bg-brand shadow-[0_0_12px_var(--x-brand)]"
-            animate={{ top: ['10%', '86%', '10%'] }}
-            transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
-          />
+        <div className="mt-3 space-y-2 opacity-40">
+          {[0, 1].map((i) => (
+            <div key={i} className="flex items-center gap-2.5 rounded-xl border border-line bg-surface p-2.5">
+              <span className="flex size-8 items-center justify-center rounded-lg bg-brand-soft text-brand"><Smartphone className="size-4" /></span>
+              <div className="flex-1">
+                <div className="h-2 w-24 rounded bg-line" />
+                <div className="mt-1.5 h-1.5 w-16 rounded bg-line/70" />
+              </div>
+              <span className="size-1.5 rounded-full bg-ok" />
+            </div>
+          ))}
         </div>
-        <p className="mt-4 flex items-center gap-2 text-[13px] text-ink-3">
-          <span className="size-1.5 animate-pulse-soft rounded-full bg-brand" />
-          {labels.waiting}
-        </p>
+        {/* Add-device modal overlay */}
+        <div className="absolute inset-0 flex items-center justify-center bg-ink/25 p-4 backdrop-blur-[1px]">
+          <div className="w-full max-w-[230px] rounded-2xl border border-line bg-raised p-4 text-center shadow-pop">
+            <p className="text-[13px] font-semibold text-ink">{labels.addBtn}</p>
+            <div className="relative mx-auto mt-3 w-fit overflow-hidden rounded-xl border border-line p-1.5">
+              <QrGlyph size={120} />
+              <motion.span
+                aria-hidden
+                className="absolute inset-x-2.5 h-0.5 rounded-full bg-brand shadow-[0_0_12px_var(--x-brand)]"
+                animate={{ top: ['10%', '86%', '10%'] }}
+                transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+              />
+            </div>
+            <p className="mt-3 flex items-center justify-center gap-2 text-[12px] text-ink-3">
+              <span className="size-1.5 animate-pulse-soft rounded-full bg-brand" />
+              {labels.waiting}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
+  )
+}
+
+/** The app's pairing entry screen: phone number + operator, then scan. */
+function PairingPhone({
+  labels,
+}: {
+  labels: {
+    pairTitle: string
+    pairSubtitle: string
+    scanCard: string
+    scanCardHint: string
+    deviceInfo: string
+    deviceName: string
+    phone: string
+    operator: string
+    connect: string
+  }
+}) {
+  const field = (label: string, value: string, icon?: ReactNode, chevron?: boolean) => (
+    <div>
+      <p className="mb-1 text-[9px] font-medium text-ink-3">{label}</p>
+      <div className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-2">
+        {icon}
+        <span className="flex-1 truncate text-[11px] text-ink">{value}</span>
+        {chevron && <ChevronDown className="size-3 text-ink-3" />}
+      </div>
+    </div>
+  )
+  return (
+    <PhoneFrame>
+      <div className="mt-2">
+        <p className="font-display text-[19px] font-bold text-ink">{labels.pairTitle}</p>
+        <p className="mt-1 text-[11px] leading-snug text-ink-3">{labels.pairSubtitle}</p>
+      </div>
+
+      {/* scan card */}
+      <div className="mt-3 flex items-center gap-2.5 rounded-2xl bg-gradient-to-br from-brand to-brand-2 p-3 text-white shadow-pop">
+        <span className="flex size-9 items-center justify-center rounded-xl bg-white/15">
+          <QrCode className="size-5" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[12.5px] font-semibold">{labels.scanCard}</p>
+          <p className="truncate text-[9.5px] text-white/85">{labels.scanCardHint}</p>
+        </div>
+        <ScanLine className="ml-auto size-4 text-white/80" />
+      </div>
+
+      {/* device details */}
+      <div className="mt-3">
+        <div className="flex items-center gap-1.5 text-brand">
+          <Smartphone className="size-3.5" />
+          <span className="text-[10px] font-semibold text-ink-2">{labels.deviceInfo}</span>
+        </div>
+        <div className="mt-2 space-y-2">
+          {field(labels.deviceName, 'Galaxy A54')}
+          <div className="flex items-end gap-2">
+            <div className="w-[74px] shrink-0">{field(' ', '+998', <span className="text-[11px]">🇺🇿</span>)}</div>
+            <div className="flex-1">{field(labels.phone, '90 123 45 67', <Phone className="size-3 text-ink-3" />)}</div>
+          </div>
+          {field(labels.operator, 'Ucell', undefined, true)}
+        </div>
+      </div>
+
+      {/* connect button */}
+      <div className="mt-3 rounded-xl bg-brand py-2.5 text-center text-[12.5px] font-semibold text-brand-ink shadow-pop">
+        {labels.connect}
+      </div>
+    </PhoneFrame>
   )
 }
 
@@ -775,23 +909,19 @@ export default function MobileAppPage() {
             <h2 className="mt-3 text-center font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl">{t.pair.title}</h2>
             <p className="mx-auto mt-4 max-w-xl text-center text-ink-2">{t.pair.body}</p>
           </Reveal>
-          <div className="mt-14 grid items-center gap-8 lg:grid-cols-[1fr_auto_1fr]">
-            <Reveal>
-              <div className="flex justify-center lg:justify-end">
-                <PairBrowser labels={t.pair} />
-              </div>
-            </Reveal>
-            <Reveal delay={0.1}>
-              <div className="flex items-center justify-center gap-1.5 text-brand">
-                <ScanLine className="size-6" />
-                <ArrowRight className="size-6 max-lg:rotate-90" />
-              </div>
-            </Reveal>
-            <Reveal delay={0.15}>
-              <div className="flex justify-center lg:justify-start">
-                <ScannerPhone labels={t.pair} />
-              </div>
-            </Reveal>
+          <div className="mt-14 flex flex-col items-center gap-12 xl:flex-row xl:items-start xl:justify-center xl:gap-6">
+            {[
+              { n: 1, node: <PairBrowser labels={t.pair} /> },
+              { n: 2, node: <PairingPhone labels={t.pair} /> },
+              { n: 3, node: <ScannerPhone labels={t.pair} /> },
+            ].map((item, i) => (
+              <Reveal key={item.n} delay={i * 0.1}>
+                <div className="flex flex-col items-center gap-4">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-brand text-sm font-bold text-brand-ink shadow-pop">{item.n}</span>
+                  {item.node}
+                </div>
+              </Reveal>
+            ))}
           </div>
           <Reveal delay={0.2}>
             <ol className="mx-auto mt-16 grid max-w-4xl gap-4 sm:grid-cols-3">
