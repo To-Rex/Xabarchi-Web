@@ -6,12 +6,14 @@ import { useT } from '@/shared/i18n'
 import { cn } from '@/shared/lib/cn'
 import { CONTACT } from '@/shared/config/contact'
 import { Button, LangSwitcher, Logo, ThemeToggle } from '@/shared/ui'
+import { useIsAuthenticated } from '@/features/auth/model/authStore'
 
 const dict = {
   uz: {
     nav: { product: 'Imkoniyatlar', app: 'Mobil ilova', pricing: 'Narxlar', docs: 'API hujjatlari', faq: 'Savollar', contact: 'Aloqa' },
     login: 'Kirish',
     cta: "Bepul boshlash",
+    dashboard: 'Boshqaruv paneli',
     footer: {
       tagline: "O'z telefoningiz — o'z SMS shlyuzingiz.",
       product: 'Mahsulot',
@@ -28,6 +30,7 @@ const dict = {
     nav: { product: 'Возможности', app: 'Приложение', pricing: 'Цены', docs: 'API документация', faq: 'Вопросы', contact: 'Контакты' },
     login: 'Войти',
     cta: 'Начать бесплатно',
+    dashboard: 'Панель управления',
     footer: {
       tagline: 'Ваш телефон — ваш SMS-шлюз.',
       product: 'Продукт',
@@ -44,6 +47,7 @@ const dict = {
     nav: { product: 'Features', app: 'Mobile app', pricing: 'Pricing', docs: 'API docs', faq: 'FAQ', contact: 'Contact' },
     login: 'Sign in',
     cta: 'Start for free',
+    dashboard: 'Dashboard',
     footer: {
       tagline: 'Your phone — your SMS gateway.',
       product: 'Product',
@@ -60,6 +64,7 @@ const dict = {
 
 export function MarketingLayout() {
   const t = useT(dict)
+  const authed = useIsAuthenticated()
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
@@ -155,12 +160,20 @@ export function MarketingLayout() {
               <LangSwitcher compact />
               <ThemeToggle />
               <span aria-hidden className="mx-1 h-5 w-px bg-line" />
-              <Link to="/login" className="whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium text-ink-2 transition-colors hover:text-ink">
-                {t.login}
-              </Link>
-              <Link to="/register">
-                <Button size="sm" className="whitespace-nowrap">{t.cta}</Button>
-              </Link>
+              {authed ? (
+                <Link to="/app">
+                  <Button size="sm" className="whitespace-nowrap">{t.dashboard}</Button>
+                </Link>
+              ) : (
+                <>
+                  <Link to="/login" className="whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium text-ink-2 transition-colors hover:text-ink">
+                    {t.login}
+                  </Link>
+                  <Link to="/register">
+                    <Button size="sm" className="whitespace-nowrap">{t.cta}</Button>
+                  </Link>
+                </>
+              )}
             </div>
 
             <button
@@ -215,12 +228,20 @@ export function MarketingLayout() {
                     <LangSwitcher compact />
                     <ThemeToggle />
                     <div className="flex-1" />
-                    <Link to="/login" className="px-3 py-2 text-sm font-medium text-ink-2">
-                      {t.login}
-                    </Link>
-                    <Link to="/register">
-                      <Button size="sm">{t.cta}</Button>
-                    </Link>
+                    {authed ? (
+                      <Link to="/app">
+                        <Button size="sm">{t.dashboard}</Button>
+                      </Link>
+                    ) : (
+                      <>
+                        <Link to="/login" className="px-3 py-2 text-sm font-medium text-ink-2">
+                          {t.login}
+                        </Link>
+                        <Link to="/register">
+                          <Button size="sm">{t.cta}</Button>
+                        </Link>
+                      </>
+                    )}
                   </div>
                 </div>
               </motion.nav>
