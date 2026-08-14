@@ -33,6 +33,7 @@ const dict = {
       to: 'Qabul qiluvchi(lar) — vergul bilan',
       text: 'Xabar matni',
       priority: 'Muhimlik',
+      prio: { urgent: 'Shoshilinch', transactional: 'Tranzaksion', bulk: 'Ommaviy' },
       send: 'So‘rov yuborish',
       sending: 'Yuborilmoqda…',
       result: 'Javob',
@@ -83,6 +84,7 @@ const dict = {
       to: 'Получатель(и) — через запятую',
       text: 'Текст сообщения',
       priority: 'Приоритет',
+      prio: { urgent: 'Срочное', transactional: 'Транзакционное', bulk: 'Массовое' },
       send: 'Отправить запрос',
       sending: 'Отправка…',
       result: 'Ответ',
@@ -133,6 +135,7 @@ const dict = {
       to: 'Recipient(s) — comma separated',
       text: 'Message text',
       priority: 'Priority',
+      prio: { urgent: 'Urgent', transactional: 'Transactional', bulk: 'Bulk' },
       send: 'Send request',
       sending: 'Sending…',
       result: 'Response',
@@ -437,9 +440,9 @@ function Playground() {
             value={priority}
             onChange={setPriority}
             segments={[
-              { value: 'urgent', label: 'urgent' },
-              { value: 'transactional', label: 'transactional' },
-              { value: 'bulk', label: 'bulk' },
+              { value: 'urgent', label: t.play.prio.urgent },
+              { value: 'transactional', label: t.play.prio.transactional },
+              { value: 'bulk', label: t.play.prio.bulk },
             ]}
           />
         </div>
