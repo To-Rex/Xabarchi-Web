@@ -379,11 +379,12 @@ function StatusRing({ size }: { size: number }) {
         ctx.fill()
       }
 
-      // thin static base ring
+      // thin static base ring — sits clearly outside the button so the button
+      // itself reads as static and only this ring appears to move.
       ctx.strokeStyle = rgba(RING_PRIMARY, 0.25)
       ctx.lineWidth = 3 * k
       ctx.beginPath()
-      ctx.arc(cx, cy, R * 0.62, 0, Math.PI * 2)
+      ctx.arc(cx, cy, R * 0.76, 0, Math.PI * 2)
       ctx.stroke()
 
       // rotating sweep-gradient arc (the main modern effect)
@@ -399,7 +400,7 @@ function StatusRing({ size }: { size: number }) {
         ctx.lineWidth = 5 * k
         ctx.lineCap = 'round'
         ctx.beginPath()
-        ctx.arc(cx, cy, R * 0.62, 0, Math.PI * 2)
+        ctx.arc(cx, cy, R * 0.76, 0, Math.PI * 2)
         ctx.stroke()
       }
     }
