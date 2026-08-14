@@ -162,9 +162,31 @@ const dict = {
   },
 }
 
-type CodeLang = 'curl' | 'js' | 'python'
+type CodeLang = 'curl' | 'js' | 'python' | 'dart' | 'kotlin' | 'java' | 'php' | 'go' | 'csharp' | 'onec'
+
+const LANGS: { id: CodeLang; label: string }[] = [
+  { id: 'curl', label: 'curl' },
+  { id: 'js', label: 'JavaScript' },
+  { id: 'python', label: 'Python' },
+  { id: 'dart', label: 'Flutter' },
+  { id: 'kotlin', label: 'Kotlin' },
+  { id: 'java', label: 'Java' },
+  { id: 'php', label: 'PHP' },
+  { id: 'go', label: 'Go' },
+  { id: 'csharp', label: 'C#' },
+  { id: 'onec', label: '1C' },
+]
 
 function sendSnippets(base: string): Record<CodeLang, { title: string; code: string }> {
+  let host = base
+  let path = '/api/v1/public/messages'
+  try {
+    const u = new URL(base)
+    host = u.host
+    path = `${u.pathname}/public/messages`
+  } catch {
+    /* keep fallbacks */
+  }
   return {
     curl: {
       title: 'curl',
@@ -208,6 +230,98 @@ res = requests.post(
     },
 )
 print(res.json())`,
+    },
+    dart: {
+      title: 'Flutter (Dart)',
+      code: `import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+final res = await http.post(
+  Uri.parse('${base}/public/messages'),
+  headers: {
+    'X-API-Key': 'xab_live_...',
+    'Content-Type': 'application/json',
+  },
+  body: jsonEncode({
+    'to': ['+998901234567'],
+    'text': 'Tasdiqlash kodingiz: 48213',
+    'priority': 'urgent',
+  }),
+);
+print(res.body);`,
+    },
+    kotlin: {
+      title: 'Kotlin (OkHttp)',
+      code: `val client = OkHttpClient()
+val json = """{"to":["+998901234567"],"text":"Tasdiqlash kodingiz: 48213","priority":"urgent"}"""
+val body = json.toRequestBody("application/json".toMediaType())
+
+val request = Request.Builder()
+    .url("${base}/public/messages")
+    .addHeader("X-API-Key", "xab_live_...")
+    .post(body)
+    .build()
+
+client.newCall(request).execute().use { println(it.body?.string()) }`,
+    },
+    java: {
+      title: 'Java (11+)',
+      code: `var json = "{\\"to\\":[\\"+998901234567\\"],\\"text\\":\\"Tasdiqlash kodingiz: 48213\\",\\"priority\\":\\"urgent\\"}";
+var request = HttpRequest.newBuilder()
+    .uri(URI.create("${base}/public/messages"))
+    .header("X-API-Key", "xab_live_...")
+    .header("Content-Type", "application/json")
+    .POST(HttpRequest.BodyPublishers.ofString(json))
+    .build();
+var res = HttpClient.newHttpClient()
+    .send(request, HttpResponse.BodyHandlers.ofString());
+System.out.println(res.body());`,
+    },
+    php: {
+      title: 'PHP',
+      code: `$ch = curl_init('${base}/public/messages');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_HTTPHEADER => [
+        'X-API-Key: xab_live_...',
+        'Content-Type: application/json',
+    ],
+    CURLOPT_POSTFIELDS => json_encode([
+        'to' => ['+998901234567'],
+        'text' => 'Tasdiqlash kodingiz: 48213',
+        'priority' => 'urgent',
+    ]),
+]);
+echo curl_exec($ch);`,
+    },
+    go: {
+      title: 'Go',
+      code: `body := []byte("{\\"to\\":[\\"+998901234567\\"],\\"text\\":\\"Tasdiqlash kodingiz: 48213\\",\\"priority\\":\\"urgent\\"}")
+req, _ := http.NewRequest("POST", "${base}/public/messages", bytes.NewBuffer(body))
+req.Header.Set("X-API-Key", "xab_live_...")
+req.Header.Set("Content-Type", "application/json")
+res, _ := http.DefaultClient.Do(req)
+defer res.Body.Close()`,
+    },
+    csharp: {
+      title: 'C#',
+      code: `using var client = new HttpClient();
+client.DefaultRequestHeaders.Add("X-API-Key", "xab_live_...");
+var json = "{\\"to\\":[\\"+998901234567\\"],\\"text\\":\\"Tasdiqlash kodingiz: 48213\\",\\"priority\\":\\"urgent\\"}";
+var content = new StringContent(json, Encoding.UTF8, "application/json");
+var res = await client.PostAsync("${base}/public/messages", content);
+Console.WriteLine(await res.Content.ReadAsStringAsync());`,
+    },
+    onec: {
+      title: '1C:Enterprise',
+      code: `Соединение = Новый HTTPСоединение("${host}", 443, , , , , Новый ЗащищенноеСоединениеOpenSSL);
+Запрос = Новый HTTPЗапрос("${path}");
+Запрос.Заголовки.Вставить("X-API-Key", "xab_live_...");
+Запрос.Заголовки.Вставить("Content-Type", "application/json");
+Запрос.УстановитьТелоИзСтроки("{""to"":[""+998901234567""],""text"":""Kod: 48213"",""priority"":""urgent""}");
+Ответ = Соединение.ОтправитьДляОбработки(Запрос);
+Сообщить(Ответ.ПолучитьТелоКакСтроку());`,
     },
   }
 }
@@ -409,16 +523,21 @@ export default function DocsPage() {
             <p className="text-sm leading-relaxed text-ink-2">{t.send}</p>
             <p className="pt-1 text-[13px] font-semibold text-ink">{t.reqTitle}</p>
             <FieldTable rows={t.fields} />
-            <SegmentedControl
-              size="sm"
-              value={codeLang}
-              onChange={(value) => setCodeLang(value)}
-              segments={[
-                { value: 'curl', label: 'curl' },
-                { value: 'js', label: 'JavaScript' },
-                { value: 'python', label: 'Python' },
-              ]}
-            />
+            <div className="flex flex-wrap gap-1.5">
+              {LANGS.map((lang) => (
+                <button
+                  key={lang.id}
+                  type="button"
+                  onClick={() => setCodeLang(lang.id)}
+                  className={cn(
+                    'rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors',
+                    codeLang === lang.id ? 'bg-brand text-brand-ink' : 'bg-sunken text-ink-2 hover:text-ink',
+                  )}
+                >
+                  {lang.label}
+                </button>
+              ))}
+            </div>
             <CodeBlock title={snippets[codeLang].title} code={snippets[codeLang].code} />
           </Section>
 
