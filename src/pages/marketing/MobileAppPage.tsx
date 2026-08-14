@@ -299,7 +299,7 @@ function PhoneFrame({ children }: { children: ReactNode }) {
             <div className="absolute left-1/2 top-2.5 z-30 flex h-[26px] w-[92px] -translate-x-1/2 items-center justify-end rounded-full bg-zinc-950 pr-2.5">
               <span className="size-2.5 rounded-full bg-zinc-800 ring-1 ring-zinc-700/70" />
             </div>
-            <div className="flex min-h-[660px] flex-col px-4 pb-3 pt-2.5">
+            <div className="flex min-h-[580px] flex-col px-4 pb-3 pt-2.5">
               {/* status bar */}
               <div className="flex h-[26px] items-center justify-between px-2 text-[11px] font-semibold text-ink-2">
                 <span className="tnum">09:41</span>
