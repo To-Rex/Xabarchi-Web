@@ -636,7 +636,7 @@ function HeroPhone({ ui }: { ui: Record<string, string> }) {
                 </div>
 
                 {/* live queue list — app LogCard style */}
-                <div className="mt-2 flex h-[142px] flex-col gap-1.5 overflow-hidden">
+                <div className="mt-2 flex h-[186px] flex-col gap-1.5 overflow-hidden">
                   <AnimatePresence initial={false}>
                     {[...items].reverse().slice(0, 3).map((message) => (
                       <motion.div
