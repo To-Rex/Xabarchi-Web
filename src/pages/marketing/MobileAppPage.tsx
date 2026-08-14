@@ -441,7 +441,7 @@ function SettingRow({ n, icon, title, children }: { n: number; icon: ReactNode; 
 }
 
 function SettingsPhone({ labels }: { labels: Record<string, string> }) {
-  const pill = (text: string, active: boolean) =>
+  const pill = (active: boolean) =>
     `flex-1 rounded-lg py-1 text-center text-[9px] font-semibold ${active ? 'bg-brand text-brand-ink' : 'text-ink-3'}`
   return (
     <PhoneFrame>
@@ -453,9 +453,9 @@ function SettingsPhone({ labels }: { labels: Record<string, string> }) {
       <div className="mt-3 flex flex-col gap-2.5">
         <SettingRow n={1} icon={<Languages className="size-3.5" />} title={labels.langTitle}>
           <div className="flex gap-0.5 rounded-lg bg-sunken p-0.5">
-            <span className={pill('O‘zbekcha', true)}>O‘zbekcha</span>
-            <span className={pill('Русский', false)}>Русский</span>
-            <span className={pill('English', false)}>English</span>
+            <span className={pill(true)}>O‘zbekcha</span>
+            <span className={pill(false)}>Русский</span>
+            <span className={pill(false)}>English</span>
           </div>
         </SettingRow>
 
