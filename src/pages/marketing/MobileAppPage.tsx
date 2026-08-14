@@ -6,14 +6,17 @@ import {
   ArrowRight,
   BatteryFull,
   Bell,
+  Flashlight,
   Globe,
   Inbox,
   Languages,
   Monitor,
   Moon,
+  Plus,
   Power,
   QrCode,
   RefreshCw,
+  ScanLine,
   Send,
   Settings,
   SignalHigh,
@@ -23,6 +26,7 @@ import {
   Unlink,
   Volume2,
   Wifi,
+  X,
   Zap,
 } from 'lucide-react'
 import { useT } from '@/shared/i18n'
@@ -50,6 +54,21 @@ const dict = {
         { title: 'QR orqali ulang', body: 'Boshqaruv panelidagi QR kodni skanerlang (yoki telefon raqami va operatorni kiriting) — qurilma hisobingizga xavfsiz bog‘lanadi.' },
         { title: 'Shlyuzni yoqing', body: 'Katta ON tugmasini bosing. Endi paneldan yuborilgan har bir SMS shu telefon orqali jo‘natiladi.' },
       ],
+    },
+    pair: {
+      eyebrow: 'QR orqali ulash',
+      title: 'Qurilmani QR kod bilan ulang',
+      body: 'Saytdagi panelda QR kod chiqadi, telefondagi ilova bilan uni skaner qilasiz — qurilma bir zumda hisobingizga bog‘lanadi.',
+      steps: [
+        { title: 'Panelda “Qurilma qo‘shish”', body: 'Saytda /app/devices sahifasiga kiring va “Qurilma qo‘shish” tugmasini bosing — ekranda QR kod paydo bo‘ladi.' },
+        { title: 'Ilovada skanerni oching', body: 'Telefonda Xabarchi ilovasini oching → “Qurilma ulash” → QR skanerni tanlang. Kamera ochiladi.' },
+        { title: 'Kodni skaner qiling', body: 'QR kodni ramka ichiga joylang. Ulangач panel “ulandi” deb ko‘rsatadi va telefon shlyuzga aylanadi.' },
+      ],
+      browserUrl: 'xabarchi.uz/app/devices',
+      browserTitle: 'Qurilma qo‘shish',
+      waiting: 'Telefonni kutmoqda…',
+      scanTitle: 'QR kodni skaner qiling',
+      scanHint: 'Kodni ramka ichiga joylang',
     },
     screen: {
       eyebrow: 'Asosiy ekran',
@@ -128,6 +147,21 @@ const dict = {
         { title: 'Включите шлюз', body: 'Нажмите большую кнопку ON. Теперь каждое SMS из панели уходит через этот телефон.' },
       ],
     },
+    pair: {
+      eyebrow: 'Подключение по QR',
+      title: 'Подключите устройство по QR-коду',
+      body: 'В панели на сайте появляется QR-код, а приложение на телефоне его сканирует — устройство мгновенно привязывается к аккаунту.',
+      steps: [
+        { title: 'В панели «Добавить устройство»', body: 'Откройте на сайте /app/devices и нажмите «Добавить устройство» — на экране появится QR-код.' },
+        { title: 'Откройте сканер в приложении', body: 'В приложении Xabarchi: «Подключить устройство» → выберите QR-сканер. Откроется камера.' },
+        { title: 'Отсканируйте код', body: 'Наведите рамку на QR-код. После подключения панель покажет «подключено», а телефон станет шлюзом.' },
+      ],
+      browserUrl: 'xabarchi.uz/app/devices',
+      browserTitle: 'Добавить устройство',
+      waiting: 'Ожидание телефона…',
+      scanTitle: 'Отсканируйте QR-код',
+      scanHint: 'Наведите рамку на код',
+    },
     screen: {
       eyebrow: 'Главный экран',
       title: 'Что и где находится',
@@ -204,6 +238,21 @@ const dict = {
         { title: 'Pair with QR', body: 'Scan the QR code from the dashboard (or enter the phone number and operator) — the device links securely to your account.' },
         { title: 'Turn the gateway on', body: 'Tap the big ON button. Every SMS you send from the dashboard now goes out through this phone.' },
       ],
+    },
+    pair: {
+      eyebrow: 'Pairing by QR',
+      title: 'Connect a device with a QR code',
+      body: 'The dashboard shows a QR code and the phone app scans it — the device links to your account instantly.',
+      steps: [
+        { title: 'Dashboard “Add device”', body: 'Open /app/devices on the site and press “Add device” — a QR code appears on screen.' },
+        { title: 'Open the scanner in the app', body: 'In the Xabarchi app: “Connect device” → choose the QR scanner. The camera opens.' },
+        { title: 'Scan the code', body: 'Line the frame up with the QR code. Once paired, the dashboard shows “connected” and the phone becomes a gateway.' },
+      ],
+      browserUrl: 'xabarchi.uz/app/devices',
+      browserTitle: 'Add device',
+      waiting: 'Waiting for the phone…',
+      scanTitle: 'Scan the QR code',
+      scanHint: 'Line the frame up with the code',
     },
     screen: {
       eyebrow: 'Home screen',
@@ -540,6 +589,131 @@ function HistoryPhone({ labels, statuses }: { labels: Record<string, string>; st
   )
 }
 
+/* --------------------------------------------------------- QR pairing pair */
+
+/** A decorative (non-scannable) QR glyph: three finder patterns + a
+ *  deterministic module fill. Purely illustrative. */
+function QrGlyph({ size = 128 }: { size?: number }) {
+  const n = 11
+  const cell = size / n
+  const finder = (x: number, y: number) => (x < 3 && y < 3) || (x > n - 4 && y < 3) || (x < 3 && y > n - 4)
+  const modules: ReactNode[] = []
+  for (let y = 0; y < n; y++)
+    for (let x = 0; x < n; x++)
+      if (!finder(x, y) && (x * 7 + y * 13 + x * y * 3) % 3 === 0)
+        modules.push(<rect key={`${x}-${y}`} x={x * cell} y={y * cell} width={cell} height={cell} />)
+  const finders: [number, number][] = [
+    [0, 0],
+    [n - 3, 0],
+    [0, n - 3],
+  ]
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} aria-hidden>
+      <rect width={size} height={size} fill="#ffffff" />
+      <g fill="#0f172a">{modules}</g>
+      {finders.map(([fx, fy]) => (
+        <g key={`${fx}-${fy}`} fill="#0f172a">
+          <rect x={fx * cell} y={fy * cell} width={3 * cell} height={3 * cell} />
+          <rect x={(fx + 0.5) * cell} y={(fy + 0.5) * cell} width={2 * cell} height={2 * cell} fill="#ffffff" />
+          <rect x={(fx + 1) * cell} y={(fy + 1) * cell} width={cell} height={cell} />
+        </g>
+      ))}
+    </svg>
+  )
+}
+
+/** The dashboard side: a browser window showing the “Add device” QR modal. */
+function PairBrowser({ labels }: { labels: { browserUrl: string; browserTitle: string; waiting: string } }) {
+  return (
+    <div className="w-full max-w-[400px] overflow-hidden rounded-2xl border border-line bg-surface shadow-pop">
+      <div className="flex items-center gap-2 border-b border-line bg-sunken px-3.5 py-2.5">
+        <span className="flex gap-1.5">
+          <span className="size-2.5 rounded-full bg-danger/70" />
+          <span className="size-2.5 rounded-full bg-gold/70" />
+          <span className="size-2.5 rounded-full bg-ok/70" />
+        </span>
+        <div className="ml-1 flex flex-1 items-center gap-1.5 rounded-md bg-surface px-2.5 py-1">
+          <Globe className="size-3 text-ink-3" />
+          <span className="tnum truncate font-mono text-[11px] text-ink-3">{labels.browserUrl}</span>
+        </div>
+      </div>
+      <div className="flex flex-col items-center px-6 py-7 text-center">
+        <div className="flex items-center gap-1.5 self-start rounded-lg bg-brand-soft px-2.5 py-1 text-[12px] font-semibold text-brand">
+          <Plus className="size-3.5" />
+          {labels.browserTitle}
+        </div>
+        <div className="relative mt-5 overflow-hidden rounded-xl border border-line p-2">
+          <QrGlyph size={132} />
+          <motion.span
+            aria-hidden
+            className="absolute inset-x-3 h-0.5 rounded-full bg-brand shadow-[0_0_12px_var(--x-brand)]"
+            animate={{ top: ['10%', '86%', '10%'] }}
+            transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        </div>
+        <p className="mt-4 flex items-center gap-2 text-[13px] text-ink-3">
+          <span className="size-1.5 animate-pulse-soft rounded-full bg-brand" />
+          {labels.waiting}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/** The phone side: the app's QR scanner (dark camera + brackets + scanline). */
+function ScannerPhone({ labels }: { labels: { scanTitle: string; scanHint: string } }) {
+  const corners = [
+    'top-0 left-0 border-l-[3px] border-t-[3px] rounded-tl-xl',
+    'top-0 right-0 border-r-[3px] border-t-[3px] rounded-tr-xl',
+    'bottom-0 left-0 border-l-[3px] border-b-[3px] rounded-bl-xl',
+    'bottom-0 right-0 border-r-[3px] border-b-[3px] rounded-br-xl',
+  ]
+  return (
+    <div className="relative mx-auto w-[300px]">
+      <div className="relative rounded-[3rem] bg-gradient-to-b from-zinc-300 via-zinc-400 to-zinc-300 p-[3px] shadow-pop dark:from-zinc-600 dark:via-zinc-700 dark:to-zinc-600">
+        <span aria-hidden className="absolute -left-[2px] top-[8.5rem] h-11 w-[3px] rounded-l-md bg-zinc-400 dark:bg-zinc-600" />
+        <span aria-hidden className="absolute -right-[2px] top-[9.5rem] h-16 w-[3px] rounded-r-md bg-zinc-400 dark:bg-zinc-600" />
+        <div className="rounded-[2.85rem] bg-zinc-950 p-[7px]">
+          <div className="relative flex h-[600px] flex-col overflow-hidden rounded-[2.45rem] bg-zinc-900">
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
+            {/* island */}
+            <div className="absolute left-1/2 top-2.5 z-30 flex h-[26px] w-[92px] -translate-x-1/2 items-center justify-end rounded-full bg-black pr-2.5">
+              <span className="size-2.5 rounded-full bg-zinc-800 ring-1 ring-zinc-700/70" />
+            </div>
+            {/* top bar */}
+            <div className="relative z-10 mt-9 flex items-center gap-2 px-4">
+              <X className="size-5 text-white/90" />
+              <p className="text-[15px] font-semibold text-white">{labels.scanTitle}</p>
+            </div>
+            {/* scan frame */}
+            <div className="relative z-10 flex flex-1 items-center justify-center">
+              <div className="relative size-52">
+                {corners.map((c) => (
+                  <span key={c} className={`absolute size-8 ${c}`} style={{ borderColor: '#2cc7b8' }} />
+                ))}
+                <motion.span
+                  aria-hidden
+                  className="absolute inset-x-1 h-0.5 rounded-full bg-[#2cc7b8] shadow-[0_0_16px_#2cc7b8]"
+                  animate={{ top: ['4%', '94%', '4%'] }}
+                  transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                />
+              </div>
+            </div>
+            {/* hint + torch */}
+            <div className="relative z-10 mb-8 flex flex-col items-center gap-4 px-6">
+              <p className="text-center text-[13px] text-white/85">{labels.scanHint}</p>
+              <span className="flex size-12 items-center justify-center rounded-full bg-white/15">
+                <Flashlight className="size-5 text-white" />
+              </span>
+            </div>
+            <div aria-hidden className="mx-auto mb-2 h-1 w-24 rounded-full bg-white/40" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ------------------------------------------------------------------ page */
 
 export default function MobileAppPage() {
@@ -590,6 +764,46 @@ export default function MobileAppPage() {
               </div>
             </Reveal>
           ))}
+        </div>
+      </section>
+
+      {/* pair a device with QR — dashboard side + phone scanner side */}
+      <section>
+        <div className="mx-auto max-w-6xl px-5 py-20 sm:py-28">
+          <Reveal>
+            <p className="text-center text-xs font-semibold uppercase tracking-wider text-brand">{t.pair.eyebrow}</p>
+            <h2 className="mt-3 text-center font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl">{t.pair.title}</h2>
+            <p className="mx-auto mt-4 max-w-xl text-center text-ink-2">{t.pair.body}</p>
+          </Reveal>
+          <div className="mt-14 grid items-center gap-8 lg:grid-cols-[1fr_auto_1fr]">
+            <Reveal>
+              <div className="flex justify-center lg:justify-end">
+                <PairBrowser labels={t.pair} />
+              </div>
+            </Reveal>
+            <Reveal delay={0.1}>
+              <div className="flex items-center justify-center gap-1.5 text-brand">
+                <ScanLine className="size-6" />
+                <ArrowRight className="size-6 max-lg:rotate-90" />
+              </div>
+            </Reveal>
+            <Reveal delay={0.15}>
+              <div className="flex justify-center lg:justify-start">
+                <ScannerPhone labels={t.pair} />
+              </div>
+            </Reveal>
+          </div>
+          <Reveal delay={0.2}>
+            <ol className="mx-auto mt-16 grid max-w-4xl gap-4 sm:grid-cols-3">
+              {t.pair.steps.map((s, i) => (
+                <li key={s.title} className="rounded-2xl border border-line bg-surface p-5">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-brand text-sm font-bold text-brand-ink">{i + 1}</span>
+                  <h3 className="mt-3 text-[15px] font-semibold text-ink">{s.title}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-ink-2">{s.body}</p>
+                </li>
+              ))}
+            </ol>
+          </Reveal>
         </div>
       </section>
 
