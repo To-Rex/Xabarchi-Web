@@ -32,6 +32,7 @@ export interface AdminUser {
   smsSentThisMonth: number
   deviceCount: number
   createdAt: string
+  deletedAt: string | null
 }
 
 export interface AdminDevice {
@@ -73,8 +74,8 @@ export function fetchOverview(): Promise<AdminOverview> {
   return api<AdminOverview>('/admin/overview')
 }
 
-export function fetchUsers(search: string, page = 1, pageSize = 20): Promise<Page<AdminUser>> {
-  return api<Page<AdminUser>>('/admin/users', { query: { search: search || undefined, page, pageSize } })
+export function fetchUsers(search: string, page = 1, pageSize = 20, deleted = false): Promise<Page<AdminUser>> {
+  return api<Page<AdminUser>>('/admin/users', { query: { search: search || undefined, deleted: deleted || undefined, page, pageSize } })
 }
 
 export function updateUser(id: string, patch: AdminUserPatch): Promise<AdminUser> {
@@ -83,6 +84,24 @@ export function updateUser(id: string, patch: AdminUserPatch): Promise<AdminUser
 
 export function deleteUser(id: string): Promise<void> {
   return api(`/admin/users/${id}`, { method: 'DELETE' })
+}
+
+export function resetQuota(id: string): Promise<AdminUser> {
+  return api<AdminUser>(`/admin/users/${id}/reset-quota`, { method: 'POST' })
+}
+
+export function restoreUser(id: string): Promise<AdminUser> {
+  return api<AdminUser>(`/admin/users/${id}/restore`, { method: 'POST' })
+}
+
+export interface NotifyPayload {
+  title: string
+  body: string
+  severity: 'info' | 'success' | 'warn' | 'error'
+}
+
+export function notifyUser(id: string, payload: NotifyPayload): Promise<void> {
+  return api(`/admin/users/${id}/notify`, { method: 'POST', body: payload })
 }
 
 export function fetchDevices(page = 1, pageSize = 30): Promise<Page<AdminDevice>> {
@@ -103,8 +122,42 @@ export interface PlanPatch {
   maxDevices?: number
   apiAccess?: boolean
   prioritySupport?: boolean
+  syncToPolar?: boolean
 }
 
-export function updatePlan(id: string, patch: PlanPatch): Promise<Plan> {
-  return api<Plan>(`/admin/plans/${id}`, { method: 'PATCH', body: patch })
+export interface PlanSync {
+  plan: Plan
+  polarSync: string
+}
+
+export function updatePlan(id: string, patch: PlanPatch): Promise<PlanSync> {
+  return api<PlanSync>(`/admin/plans/${id}`, { method: 'PATCH', body: patch })
+}
+
+export interface Discount {
+  id: string
+  name: string
+  code?: string | null
+  type: string
+  basisPoints?: number
+  amount?: number
+  currency?: string
+  duration?: string
+}
+
+export interface DiscountPayload {
+  name: string
+  kind: 'percentage' | 'fixed'
+  value: number
+  code?: string
+  duration: 'once' | 'forever' | 'repeating'
+  planId?: 'biznes' | 'korxona'
+}
+
+export function fetchDiscounts(): Promise<Discount[]> {
+  return api<Discount[]>('/admin/discounts')
+}
+
+export function createDiscount(payload: DiscountPayload): Promise<Discount> {
+  return api<Discount>('/admin/discounts', { method: 'POST', body: payload })
 }

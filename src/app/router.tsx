@@ -43,6 +43,7 @@ const AdminOverviewPage = lazy(() => import('@/pages/admin/AdminOverviewPage'))
 const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage'))
 const AdminDevicesPage = lazy(() => import('@/pages/admin/AdminDevicesPage'))
 const AdminPlansPage = lazy(() => import('@/pages/admin/AdminPlansPage'))
+const AdminDiscountsPage = lazy(() => import('@/pages/admin/AdminDiscountsPage'))
 const AdminInvoicesPage = lazy(() => import('@/pages/admin/AdminInvoicesPage'))
 
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'))
@@ -142,6 +143,7 @@ export const router = createBrowserRouter([
       { path: 'users', element: <Boundary><AdminUsersPage /></Boundary> },
       { path: 'devices', element: <Boundary><AdminDevicesPage /></Boundary> },
       { path: 'plans', element: <Boundary><AdminPlansPage /></Boundary> },
+      { path: 'discounts', element: <Boundary><AdminDiscountsPage /></Boundary> },
       { path: 'invoices', element: <Boundary><AdminInvoicesPage /></Boundary> },
     ],
   },

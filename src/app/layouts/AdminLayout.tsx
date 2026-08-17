@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router-dom'
-import { ArrowLeft, CreditCard, LayoutDashboard, Receipt, ShieldCheck, Smartphone, Users } from 'lucide-react'
+import { ArrowLeft, CreditCard, LayoutDashboard, Receipt, ShieldCheck, Smartphone, Ticket, Users } from 'lucide-react'
 import { cn } from '@/shared/lib/cn'
 import { Button, LogoMark, ThemeToggle } from '@/shared/ui'
 import { signOut, useCurrentUser } from '@/features/auth/model/authStore'
@@ -9,6 +9,7 @@ const NAV = [
   { to: '/admin/users', icon: Users, label: 'Foydalanuvchilar' },
   { to: '/admin/devices', icon: Smartphone, label: 'Qurilmalar' },
   { to: '/admin/plans', icon: CreditCard, label: 'Tariflar' },
+  { to: '/admin/discounts', icon: Ticket, label: 'Chegirmalar' },
   { to: '/admin/invoices', icon: Receipt, label: 'Hisob-fakturalar' },
 ]
 

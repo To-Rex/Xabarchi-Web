@@ -29,26 +29,38 @@ export default function AdminPlansPage() {
   )
 }
 
+const POLAR_SYNC_MSG: Record<string, string> = {
+  synced: 'Narx Polarga sinxronlandi ✓',
+  polar_disabled: 'Polar sozlanmagan — faqat bazada saqlandi',
+  not_purchasable: 'Bu tarif Polarda sotilmaydi',
+  skipped: '',
+}
+
 function PlanCard({ plan }: { plan: Plan }) {
   const toast = useToast()
   const [form, setForm] = useState(plan)
+  const [syncPolar, setSyncPolar] = useState(false)
   const [busy, setBusy] = useState(false)
   useEffect(() => setForm(plan), [plan])
 
+  const purchasable = plan.id !== 'start'
   const num = (key: 'monthlyPrice' | 'smsPerMonth' | 'maxDevices') => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [key]: Number(e.target.value.replace(/\D/g, '')) || 0 }))
 
   const save = async () => {
     setBusy(true)
     try {
-      await updatePlan(plan.id, {
+      const { polarSync } = await updatePlan(plan.id, {
         monthlyPrice: form.monthlyPrice,
         smsPerMonth: form.smsPerMonth,
         maxDevices: form.maxDevices,
         apiAccess: form.apiAccess,
         prioritySupport: form.prioritySupport,
+        syncToPolar: syncPolar,
       })
       toast('success', 'Tarif saqlandi')
+      const note = POLAR_SYNC_MSG[polarSync] ?? (polarSync.startsWith('error') ? 'Polar sinxronizatsiyasi xato berdi' : '')
+      if (note) toast(polarSync === 'synced' ? 'success' : 'info', note)
     } catch {
       toast('error', 'Saqlab bo‘lmadi')
     } finally {
@@ -73,6 +85,12 @@ function PlanCard({ plan }: { plan: Plan }) {
           <span className="text-[13px] text-ink">Ustuvor qo‘llab-quvvatlash</span>
           <Switch checked={form.prioritySupport} onChange={(v) => setForm((f) => ({ ...f, prioritySupport: v }))} />
         </label>
+        {purchasable && (
+          <label className="flex items-center justify-between rounded-lg bg-brand-soft/60 px-2.5 py-2">
+            <span className="text-[12.5px] font-medium text-brand-2 dark:text-brand">Narxni Polarga sinxronlash</span>
+            <Switch checked={syncPolar} onChange={setSyncPolar} />
+          </label>
+        )}
         <Button loading={busy} onClick={save} className="mt-2 w-full">Saqlash</Button>
       </CardBody>
     </Card>

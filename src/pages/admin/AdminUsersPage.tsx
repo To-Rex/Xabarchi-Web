@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BadgeCheck, MailCheck, Search, Shield, Smartphone, Trash2 } from 'lucide-react'
+import { BadgeCheck, Bell, MailCheck, RotateCcw, Search, Shield, Smartphone, Trash2, Undo2 } from 'lucide-react'
 import { useLang } from '@/shared/i18n'
 import { useAsync } from '@/shared/lib/useAsync'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
@@ -7,11 +7,14 @@ import { formatDate, formatNumber } from '@/shared/lib/format'
 import {
   deleteUser,
   fetchUsers,
+  notifyUser,
+  resetQuota,
+  restoreUser,
   updateUser,
   type AdminUser,
   type AdminUserPatch,
 } from '@/features/admin/api/repository'
-import { Avatar, Badge, Button, Card, CardBody, EmptyState, Input, Modal, Skeleton, Switch, useToast } from '@/shared/ui'
+import { Avatar, Badge, Button, Card, CardBody, EmptyState, Input, Modal, Skeleton, Switch, Textarea, useToast } from '@/shared/ui'
 
 const PLANS = ['start', 'biznes', 'korxona'] as const
 
@@ -21,10 +24,11 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
+  const [showDeleted, setShowDeleted] = useState(false)
   const [editing, setEditing] = useState<AdminUser | null>(null)
   const [version, setVersion] = useState(0)
 
-  const { data, loading, error, refetch } = useAsync(() => fetchUsers(query, page), [query, page, version])
+  const { data, loading, error, refetch } = useAsync(() => fetchUsers(query, page, 20, showDeleted), [query, page, showDeleted, version])
   const users = data?.items ?? []
   const total = data?.total ?? 0
   const pageSize = 20
@@ -43,16 +47,22 @@ export default function AdminUsersPage() {
           <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Foydalanuvchilar</h1>
           <p className="mt-0.5 text-sm text-ink-2">Jami: {formatNumber(total, lang)}</p>
         </div>
-        <form onSubmit={submit} className="flex gap-2">
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Email, kompaniya, ism, telefon…"
-            leading={<Search className="size-4" />}
-            containerClassName="w-64"
-          />
-          <Button type="submit" variant="secondary">Qidirish</Button>
-        </form>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-[13px] text-ink-2">
+            <Switch checked={showDeleted} onChange={(v) => { setShowDeleted(v); setPage(1) }} />
+            O‘chirilganlar
+          </label>
+          <form onSubmit={submit} className="flex gap-2">
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Email, kompaniya, ism, telefon…"
+              leading={<Search className="size-4" />}
+              containerClassName="w-64"
+            />
+            <Button type="submit" variant="secondary">Qidirish</Button>
+          </form>
+        </div>
       </div>
 
       {error ? (
@@ -71,6 +81,7 @@ export default function AdminUsersPage() {
                   <p className="flex flex-wrap items-center gap-2 text-[15px] font-semibold text-ink">
                     {u.firstName} {u.lastName}
                     {u.isAdmin && <Badge tone="brand"><Shield className="size-3" /> Admin</Badge>}
+                    {u.deletedAt && <Badge tone="danger">o‘chirilgan</Badge>}
                     {u.emailVerified ? <BadgeCheck className="size-4 text-ok" /> : <Badge tone="gold">tasdiqlanmagan</Badge>}
                   </p>
                   <p className="tnum truncate text-[13px] text-ink-3">{u.email} · {u.company}</p>
@@ -119,8 +130,34 @@ function EditUserModal({ user, onClose, onSaved }: { user: AdminUser; onClose: (
   const [isAdmin, setIsAdmin] = useState(user.isAdmin)
   const [busy, setBusy] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [notifyTitle, setNotifyTitle] = useState('')
+  const [notifyBody, setNotifyBody] = useState('')
+  const [notifySeverity, setNotifySeverity] = useState<'info' | 'success' | 'warn' | 'error'>('info')
 
   const extend = (days: number) => setExpiresAt(new Date(Date.now() + days * 864e5).toISOString())
+
+  const doReset = async () => {
+    setBusy(true)
+    try { await resetQuota(user.id); toast('success', 'Kvota nolga tushirildi'); onSaved() }
+    catch { toast('error', 'Bajarilmadi'); setBusy(false) }
+  }
+
+  const doRestore = async () => {
+    setBusy(true)
+    try { await restoreUser(user.id); toast('success', 'Foydalanuvchi tiklandi'); onSaved() }
+    catch { toast('error', 'Bajarilmadi'); setBusy(false) }
+  }
+
+  const sendNotify = async () => {
+    if (!notifyTitle.trim() || !notifyBody.trim()) return
+    setBusy(true)
+    try {
+      await notifyUser(user.id, { title: notifyTitle.trim(), body: notifyBody.trim(), severity: notifySeverity })
+      toast('success', 'Xabar yuborildi')
+      setNotifyTitle(''); setNotifyBody('')
+      setBusy(false)
+    } catch { toast('error', 'Yuborilmadi'); setBusy(false) }
+  }
 
   const save = async () => {
     setBusy(true)
@@ -202,8 +239,47 @@ function EditUserModal({ user, onClose, onSaved }: { user: AdminUser; onClose: (
           </label>
         </div>
 
+        {/* quick actions */}
         <div className="border-t border-line pt-4">
-          {confirmDelete ? (
+          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-ink-3">Amallar</p>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="secondary" loading={busy} onClick={doReset}>
+              <RotateCcw className="size-4" /> Oylik kvotani nolga ({formatNumber(user.smsSentThisMonth, lang)})
+            </Button>
+          </div>
+        </div>
+
+        {/* send a notification */}
+        <div className="border-t border-line pt-4">
+          <p className="mb-2 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide text-ink-3"><Bell className="size-3.5" /> Xabar yuborish</p>
+          <div className="space-y-2">
+            <Input placeholder="Sarlavha" value={notifyTitle} onChange={(e) => setNotifyTitle(e.target.value)} />
+            <Textarea placeholder="Matn" rows={2} value={notifyBody} onChange={(e) => setNotifyBody(e.target.value)} />
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex gap-1">
+                {(['info', 'success', 'warn', 'error'] as const).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setNotifySeverity(s)}
+                    className={`rounded-md px-2 py-1 text-[11px] font-semibold capitalize transition-colors ${notifySeverity === s ? 'bg-brand text-brand-ink' : 'bg-sunken text-ink-2'}`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+              <Button size="sm" loading={busy} disabled={!notifyTitle.trim() || !notifyBody.trim()} onClick={sendNotify}>Yuborish</Button>
+            </div>
+          </div>
+        </div>
+
+        {/* restore or delete */}
+        <div className="border-t border-line pt-4">
+          {user.deletedAt ? (
+            <Button variant="secondary" size="sm" loading={busy} onClick={doRestore}>
+              <Undo2 className="size-4" /> Foydalanuvchini tiklash
+            </Button>
+          ) : confirmDelete ? (
             <div className="flex items-center justify-between gap-3 rounded-lg bg-danger-soft p-3">
               <span className="text-[13px] text-danger">Rostdan o‘chirasizmi?</span>
               <div className="flex gap-2">
