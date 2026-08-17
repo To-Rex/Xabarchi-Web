@@ -65,7 +65,7 @@ export default function AdminDiscountsPage() {
               <SegmentedControl size="sm" value={kind} onChange={setKind} segments={[{ value: 'percentage', label: 'Foiz %' }, { value: 'fixed', label: 'Qat’iy summa' }]} />
             </div>
             <Input
-              label={kind === 'percentage' ? 'Foiz (0–100)' : 'Summa (minor birlik, mas. cent)'}
+              label={kind === 'percentage' ? 'Foiz (0–100)' : 'Summa (UZS so‘m)'}
               value={value}
               onChange={(e) => setValue(e.target.value)}
               className="font-mono"
