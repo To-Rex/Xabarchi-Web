@@ -1,10 +1,11 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import { createBrowserRouter, Navigate, useLocation } from 'react-router-dom'
 import { DispatchPath } from '@/shared/ui'
-import { useIsAuthenticated } from '@/features/auth/model/authStore'
+import { useCurrentUser, useIsAuthenticated } from '@/features/auth/model/authStore'
 import { MarketingLayout } from './layouts/MarketingLayout'
 import { AuthLayout } from './layouts/AuthLayout'
 import { DashboardLayout } from './layouts/DashboardLayout'
+import { AdminLayout } from './layouts/AdminLayout'
 import { RouteError } from './RouteError'
 
 const HomePage = lazy(() => import('@/pages/marketing/HomePage'))
@@ -38,6 +39,12 @@ const SettingsPage = lazy(() => import('@/pages/dashboard/SettingsPage'))
 const ProfilePage = lazy(() => import('@/pages/dashboard/ProfilePage'))
 const NotificationsPage = lazy(() => import('@/pages/dashboard/NotificationsPage'))
 const HelpPage = lazy(() => import('@/pages/dashboard/HelpPage'))
+const AdminOverviewPage = lazy(() => import('@/pages/admin/AdminOverviewPage'))
+const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage'))
+const AdminDevicesPage = lazy(() => import('@/pages/admin/AdminDevicesPage'))
+const AdminPlansPage = lazy(() => import('@/pages/admin/AdminPlansPage'))
+const AdminInvoicesPage = lazy(() => import('@/pages/admin/AdminInvoicesPage'))
+
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'))
 
 function FullScreenLoader() {
@@ -56,6 +63,16 @@ function RequireAuth({ children }: { children: ReactNode }) {
   const authed = useIsAuthenticated()
   const location = useLocation()
   if (!authed) return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  return <>{children}</>
+}
+
+function RequireAdmin({ children }: { children: ReactNode }) {
+  const authed = useIsAuthenticated()
+  const user = useCurrentUser()
+  const location = useLocation()
+  if (!authed) return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  if (user === null) return <FullScreenLoader /> // profile still loading
+  if (!user.isAdmin) return <Navigate to="/app" replace />
   return <>{children}</>
 }
 
@@ -110,6 +127,22 @@ export const router = createBrowserRouter([
       { path: 'profile', element: <Boundary><ProfilePage /></Boundary> },
       { path: 'notifications', element: <Boundary><NotificationsPage /></Boundary> },
       { path: 'help', element: <Boundary><HelpPage /></Boundary> },
+    ],
+  },
+  {
+    path: '/admin',
+    element: (
+      <RequireAdmin>
+        <AdminLayout />
+      </RequireAdmin>
+    ),
+    errorElement: <RouteError />,
+    children: [
+      { index: true, element: <Boundary><AdminOverviewPage /></Boundary> },
+      { path: 'users', element: <Boundary><AdminUsersPage /></Boundary> },
+      { path: 'devices', element: <Boundary><AdminDevicesPage /></Boundary> },
+      { path: 'plans', element: <Boundary><AdminPlansPage /></Boundary> },
+      { path: 'invoices', element: <Boundary><AdminInvoicesPage /></Boundary> },
     ],
   },
   { path: '*', element: <Boundary><NotFoundPage /></Boundary>, errorElement: <RouteError /> },

@@ -193,6 +193,7 @@ export interface UserProfile {
   createdAt: string
   timezone: string
   emailVerified: boolean
+  isAdmin?: boolean
 }
 
 /** Generic offset-paginated result (backend `Page[T]`). */

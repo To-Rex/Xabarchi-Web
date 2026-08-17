@@ -13,6 +13,7 @@ import {
   Menu,
   MessageSquareText,
   Settings,
+  ShieldCheck,
   Smartphone,
   UserRound,
   Users,
@@ -364,6 +365,11 @@ export function DashboardLayout() {
                 <DropdownItem icon={<Settings />} onClick={() => { close(); navigate('/app/settings') }}>
                   {t.nav.settings}
                 </DropdownItem>
+                {user?.isAdmin && (
+                  <DropdownItem icon={<ShieldCheck />} onClick={() => { close(); navigate('/admin') }}>
+                    Admin panel
+                  </DropdownItem>
+                )}
                 <DropdownSeparator />
                 <DropdownItem
                   danger
