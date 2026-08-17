@@ -8,7 +8,7 @@ import { Badge, Button, Card, CardBody, CardHeader, CardTitle, EmptyState, Input
 
 function discountValue(d: Discount): string {
   if (d.type === 'percentage' && typeof d.basisPoints === 'number') return `${d.basisPoints / 100}%`
-  if (typeof d.amount === 'number') return `${d.amount} ${(d.currency ?? '').toUpperCase()}`
+  if (typeof d.amount === 'number') return `${Math.round(d.amount / 100).toLocaleString()} ${(d.currency ?? '').toUpperCase()}`
   return '—'
 }
 
