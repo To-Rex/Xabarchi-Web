@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Percent, Tag, Ticket } from 'lucide-react'
+import { ApiError } from '@/shared/api/client'
 import { useAsync } from '@/shared/lib/useAsync'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
 import { createDiscount, fetchDiscounts, type Discount, type DiscountPayload } from '@/features/admin/api/repository'
@@ -41,8 +42,8 @@ export default function AdminDiscountsPage() {
       toast('success', 'Chegirma yaratildi')
       setName(''); setCode('')
       setVersion((v) => v + 1)
-    } catch {
-      toast('error', 'Yaratib bo‘lmadi — Polar sozlanganini tekshiring')
+    } catch (err) {
+      toast('error', err instanceof ApiError ? err.message : 'Yaratib bo‘lmadi — Polar sozlanganini tekshiring')
     } finally {
       setBusy(false)
     }

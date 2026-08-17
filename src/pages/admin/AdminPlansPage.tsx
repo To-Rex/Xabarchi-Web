@@ -59,8 +59,8 @@ function PlanCard({ plan }: { plan: Plan }) {
         syncToPolar: syncPolar,
       })
       toast('success', 'Tarif saqlandi')
-      const note = POLAR_SYNC_MSG[polarSync] ?? (polarSync.startsWith('error') ? 'Polar sinxronizatsiyasi xato berdi' : '')
-      if (note) toast(polarSync === 'synced' ? 'success' : 'info', note)
+      if (polarSync.startsWith('error:')) toast('error', `Polar: ${polarSync.slice(6)}`)
+      else if (POLAR_SYNC_MSG[polarSync]) toast(polarSync === 'synced' ? 'success' : 'info', POLAR_SYNC_MSG[polarSync])
     } catch {
       toast('error', 'Saqlab bo‘lmadi')
     } finally {
