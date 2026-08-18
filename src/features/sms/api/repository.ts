@@ -75,6 +75,26 @@ export function cancelSms(id: number): Promise<SmsMessage> {
   return api<SmsMessage>(`/messages/${id}/cancel`, { method: 'POST' })
 }
 
+export type BulkAction = 'cancel' | 'delete' | 'priority'
+
+/** Apply one action to many selected messages. Returns how many were affected. */
+export async function bulkAction(ids: number[], action: BulkAction, priority?: SmsPriority): Promise<number> {
+  const res = await api<{ affected: number }>('/messages/bulk', {
+    method: 'POST',
+    body: { ids, action, priority },
+  })
+  return res.affected
+}
+
+/** Delete all messages (optionally only one status). Returns how many were removed. */
+export async function clearMessages(status?: MessageStatus): Promise<number> {
+  const res = await api<{ affected: number }>('/messages/clear', {
+    method: 'POST',
+    body: { status },
+  })
+  return res.affected
+}
+
 export function getDeviceName(deviceId?: string | null): string {
   if (!deviceId) return '—'
   return deviceNames.get(deviceId) ?? deviceId.slice(0, 8)

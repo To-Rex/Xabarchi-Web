@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'motion/react'
-import { Ban, ChevronLeft, ChevronRight, PenLine, RefreshCw, Search, Smartphone } from 'lucide-react'
+import { Ban, ChevronLeft, ChevronRight, PenLine, RefreshCw, Search, Smartphone, Trash2, Zap } from 'lucide-react'
 import { useLang, useT } from '@/shared/i18n'
 import { commonDict } from '@/shared/i18n/common'
 import { useAsync } from '@/shared/lib/useAsync'
@@ -9,9 +9,9 @@ import { usePageMeta } from '@/shared/lib/usePageMeta'
 import { formatDateTime, formatPhone, formatTime } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/cn'
 import { ApiError } from '@/shared/api/client'
-import type { MessageStatus, SmsMessage } from '@/shared/api/types'
+import type { MessageStatus, SmsMessage, SmsPriority } from '@/shared/api/types'
 import { Button, Card, EmptyState, Input, MessageStatusBadge, Modal, PageHeader, PriorityBadge, Skeleton, Tabs, useToast } from '@/shared/ui'
-import { cancelSms, fetchMessages, getContactName, getDeviceName, resendSms } from '@/features/sms/api/repository'
+import { bulkAction, cancelSms, clearMessages, fetchMessages, getContactName, getDeviceName, resendSms, type BulkAction } from '@/features/sms/api/repository'
 
 const dict = {
   uz: {
@@ -40,6 +40,13 @@ const dict = {
     cancel: 'Bekor qilish',
     canceledToast: 'SMS bekor qilindi — yuborilmaydi',
     cancelFailed: 'Bekor qilib bo‘lmadi',
+    bulk: {
+      selected: 'tanlandi', urgent: 'Tezkor', transactional: 'Transaksion', mass: 'Ommaviy',
+      cancel: 'Bekor qilish', del: 'O‘chirish', clearSel: 'Bekor',
+      clearAll: 'Hammasini tozalash', clearTitle: 'Barcha SMS o‘chirilsinmi?',
+      clearBody: 'Barcha SMS xabarlaringiz butunlay o‘chiriladi. Bu amalni qaytarib bo‘lmaydi.',
+      clearBtn: 'Ha, tozalash', done: 'Bajarildi', failed: 'Amalni bajarib bo‘lmadi', cleared: 'ta SMS o‘chirildi',
+    },
     pageOf: (page: number, total: number) => `${page} / ${total}-sahifa`,
   },
   ru: {
@@ -68,6 +75,13 @@ const dict = {
     cancel: 'Отменить',
     canceledToast: 'SMS отменено — не будет отправлено',
     cancelFailed: 'Не удалось отменить',
+    bulk: {
+      selected: 'выбрано', urgent: 'Срочные', transactional: 'Транзакц.', mass: 'Массовые',
+      cancel: 'Отменить', del: 'Удалить', clearSel: 'Сброс',
+      clearAll: 'Очистить всё', clearTitle: 'Удалить все SMS?',
+      clearBody: 'Все ваши SMS будут удалены безвозвратно. Действие необратимо.',
+      clearBtn: 'Да, очистить', done: 'Готово', failed: 'Не удалось выполнить', cleared: 'SMS удалено',
+    },
     pageOf: (page: number, total: number) => `Стр. ${page} из ${total}`,
   },
   en: {
@@ -96,6 +110,13 @@ const dict = {
     cancel: 'Cancel',
     canceledToast: 'SMS canceled — it won’t be sent',
     cancelFailed: 'Could not cancel',
+    bulk: {
+      selected: 'selected', urgent: 'Urgent', transactional: 'Transact.', mass: 'Bulk',
+      cancel: 'Cancel', del: 'Delete', clearSel: 'Clear',
+      clearAll: 'Clear all', clearTitle: 'Delete all SMS?',
+      clearBody: 'All your SMS will be permanently deleted. This can’t be undone.',
+      clearBtn: 'Yes, clear', done: 'Done', failed: 'Action failed', cleared: 'SMS deleted',
+    },
     pageOf: (page: number, total: number) => `Page ${page} of ${total}`,
   },
 }
@@ -124,6 +145,10 @@ export default function SmsPage() {
   const [selected, setSelected] = useState<SmsMessage | null>(null)
   const [resending, setResending] = useState(false)
   const [canceling, setCanceling] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [clearOpen, setClearOpen] = useState(false)
+  const [clearBusy, setClearBusy] = useState(false)
   const debouncedSearch = useDebounced(search)
 
   const pageSize = 12
@@ -167,6 +192,55 @@ export default function SmsPage() {
     }
   }
 
+  // Selection resets whenever the visible set changes.
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [tab, debouncedSearch, page])
+
+  const toggleId = (id: number) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+
+  const pageIds = data?.items.map((m) => m.id) ?? []
+  const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id))
+  const toggleAll = () => setSelectedIds(allSelected ? new Set() : new Set(pageIds))
+
+  const runBulk = async (action: BulkAction, priority?: SmsPriority) => {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+    setBulkBusy(true)
+    try {
+      const affected = await bulkAction(ids, action, priority)
+      toast('success', `${affected} ${action === 'delete' ? t.bulk.cleared : t.bulk.done}`)
+      setSelectedIds(new Set())
+      refetch()
+    } catch (err) {
+      toast('error', err instanceof ApiError ? err.message : t.bulk.failed)
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
+  const runClear = async () => {
+    setClearBusy(true)
+    try {
+      const affected = await clearMessages()
+      toast('success', `${affected} ${t.bulk.cleared}`)
+      setSelectedIds(new Set())
+      setClearOpen(false)
+      setPage(1)
+      refetch()
+    } catch (err) {
+      toast('error', err instanceof ApiError ? err.message : t.bulk.failed)
+    } finally {
+      setClearBusy(false)
+    }
+  }
+
   const tabs = useMemo(
     () => [
       { value: 'all' as const, label: t.tabs.all, count: counts?.all },
@@ -184,12 +258,18 @@ export default function SmsPage() {
         title={t.title}
         subtitle={t.subtitle}
         actions={
-          <Link to="/app/sms/new">
-            <Button>
-              <PenLine className="size-4" />
-              {t.newSms}
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" className="text-ink-3 hover:text-danger" onClick={() => setClearOpen(true)}>
+              <Trash2 className="size-4" />
+              {t.bulk.clearAll}
             </Button>
-          </Link>
+            <Link to="/app/sms/new">
+              <Button>
+                <PenLine className="size-4" />
+                {t.newSms}
+              </Button>
+            </Link>
+          </div>
         }
       />
 
@@ -207,6 +287,21 @@ export default function SmsPage() {
             <Tabs value={tab} onChange={setTab} tabs={tabs} className="border-b-0" />
           </div>
         </div>
+
+        {selectedIds.size > 0 && (
+          <div className="flex flex-wrap items-center gap-2 border-b border-line bg-brand-soft/40 px-5 py-2.5">
+            <span className="mr-1 text-[13px] font-semibold text-ink">{selectedIds.size} {t.bulk.selected}</span>
+            <span className="text-[12px] text-ink-3">·</span>
+            <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={() => runBulk('priority', 'urgent')}><Zap className="size-3.5 text-danger" />{t.bulk.urgent}</Button>
+            <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={() => runBulk('priority', 'transactional')}>{t.bulk.transactional}</Button>
+            <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={() => runBulk('priority', 'bulk')}>{t.bulk.mass}</Button>
+            <span className="text-[12px] text-ink-3">·</span>
+            <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={() => runBulk('cancel')}><Ban className="size-3.5" />{t.bulk.cancel}</Button>
+            <Button size="sm" variant="ghost" className="text-danger" disabled={bulkBusy} onClick={() => runBulk('delete')}><Trash2 className="size-3.5" />{t.bulk.del}</Button>
+            <div className="flex-1" />
+            <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>{t.bulk.clearSel}</Button>
+          </div>
+        )}
 
         {error ? (
           <EmptyState title={c.errorTitle} body={c.errorBody} action={<Button onClick={refetch}>{c.retry}</Button>} />
@@ -237,7 +332,10 @@ export default function SmsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-3">
-                    <th className="px-5 py-3 font-semibold">{t.cols.recipient}</th>
+                    <th className="w-10 py-3 pl-5 pr-2">
+                      <input type="checkbox" checked={allSelected} onChange={toggleAll} className="size-4 accent-[var(--x-brand)]" aria-label="select all" />
+                    </th>
+                    <th className="px-3 py-3 font-semibold">{t.cols.recipient}</th>
                     <th className="px-3 py-3 font-semibold">{t.cols.text}</th>
                     <th className="px-3 py-3 font-semibold">{t.cols.device}</th>
                     <th className="px-3 py-3 font-semibold">{t.cols.time}</th>
@@ -254,9 +352,12 @@ export default function SmsPage() {
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.25, delay: Math.min(index * 0.03, 0.3) }}
                         onClick={() => setSelected(message)}
-                        className="cursor-pointer border-b border-line transition-colors last:border-none hover:bg-sunken/60"
+                        className={cn('cursor-pointer border-b border-line transition-colors last:border-none hover:bg-sunken/60', selectedIds.has(message.id) && 'bg-brand-soft/40')}
                       >
-                        <td className="px-5 py-3.5">
+                        <td className="py-3.5 pl-5 pr-2" onClick={(e) => e.stopPropagation()}>
+                          <input type="checkbox" checked={selectedIds.has(message.id)} onChange={() => toggleId(message.id)} className="size-4 accent-[var(--x-brand)]" aria-label="select" />
+                        </td>
+                        <td className="px-3 py-3.5">
                           {name && <p className="font-medium text-ink">{name}</p>}
                           <p className={cn('tnum font-mono text-[13px]', name ? 'text-ink-3' : 'text-ink')}>{formatPhone(message.to)}</p>
                         </td>
@@ -288,21 +389,23 @@ export default function SmsPage() {
               {data.items.map((message) => {
                 const name = getContactName(message.contactId)
                 return (
-                  <button
+                  <div
                     key={message.id}
-                    onClick={() => setSelected(message)}
-                    className="w-full rounded-xl border border-line p-3.5 text-left transition-colors hover:border-line-2"
+                    className={cn('flex gap-3 rounded-xl border border-line p-3.5 transition-colors', selectedIds.has(message.id) && 'bg-brand-soft/40')}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="tnum font-mono text-[13px] font-medium text-ink">{name ?? formatPhone(message.to)}</span>
-                      <MessageStatusBadge status={message.status} />
-                    </div>
-                    <p className="mt-1.5 line-clamp-2 text-[13px] text-ink-2">{message.text}</p>
-                    <p className="mt-1.5 flex items-center justify-between gap-2">
-                      <PriorityBadge priority={message.priority} />
-                      <span className="tnum text-xs text-ink-3">{formatDateTime(message.createdAt, lang)}</span>
-                    </p>
-                  </button>
+                    <input type="checkbox" checked={selectedIds.has(message.id)} onChange={() => toggleId(message.id)} className="mt-0.5 size-4 shrink-0 accent-[var(--x-brand)]" aria-label="select" />
+                    <button onClick={() => setSelected(message)} className="min-w-0 flex-1 text-left">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="tnum font-mono text-[13px] font-medium text-ink">{name ?? formatPhone(message.to)}</span>
+                        <MessageStatusBadge status={message.status} />
+                      </div>
+                      <p className="mt-1.5 line-clamp-2 text-[13px] text-ink-2">{message.text}</p>
+                      <p className="mt-1.5 flex items-center justify-between gap-2">
+                        <PriorityBadge priority={message.priority} />
+                        <span className="tnum text-xs text-ink-3">{formatDateTime(message.createdAt, lang)}</span>
+                      </p>
+                    </button>
+                  </div>
                 )
               })}
             </div>
@@ -395,6 +498,26 @@ export default function SmsPage() {
             </dl>
           </div>
         )}
+      </Modal>
+
+      {/* Clear-all confirm */}
+      <Modal
+        open={clearOpen}
+        onClose={() => setClearOpen(false)}
+        title={t.bulk.clearTitle}
+        closeLabel={c.close}
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setClearOpen(false)}>{c.cancel}</Button>
+            <Button variant="danger" loading={clearBusy} onClick={runClear}>
+              <Trash2 className="size-4" />
+              {t.bulk.clearBtn}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm leading-relaxed text-ink-2">{t.bulk.clearBody}</p>
       </Modal>
     </div>
   )
