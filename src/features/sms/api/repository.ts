@@ -70,6 +70,11 @@ export function resendSms(id: number): Promise<SmsMessage> {
   return api<SmsMessage>(`/messages/${id}/resend`, { method: 'POST' })
 }
 
+/** Cancel a still-queued message so the gateway never sends it. */
+export function cancelSms(id: number): Promise<SmsMessage> {
+  return api<SmsMessage>(`/messages/${id}/cancel`, { method: 'POST' })
+}
+
 export function getDeviceName(deviceId?: string | null): string {
   if (!deviceId) return '—'
   return deviceNames.get(deviceId) ?? deviceId.slice(0, 8)

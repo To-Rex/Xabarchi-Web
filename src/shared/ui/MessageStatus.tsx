@@ -4,24 +4,25 @@ import { cn } from '@/shared/lib/cn'
 import { Badge } from './Badge'
 
 const dict = {
-  uz: { queued: 'Navbatda', sending: 'Yuborilmoqda', sent: 'Yuborildi', delivered: 'Yetkazildi', failed: 'Xato' },
-  ru: { queued: 'В очереди', sending: 'Отправляется', sent: 'Отправлено', delivered: 'Доставлено', failed: 'Ошибка' },
-  en: { queued: 'Queued', sending: 'Sending', sent: 'Sent', delivered: 'Delivered', failed: 'Failed' },
+  uz: { queued: 'Navbatda', sending: 'Yuborilmoqda', sent: 'Yuborildi', delivered: 'Yetkazildi', failed: 'Xato', canceled: 'Bekor qilindi' },
+  ru: { queued: 'В очереди', sending: 'Отправляется', sent: 'Отправлено', delivered: 'Доставлено', failed: 'Ошибка', canceled: 'Отменено' },
+  en: { queued: 'Queued', sending: 'Sending', sent: 'Sent', delivered: 'Delivered', failed: 'Failed', canceled: 'Canceled' },
 }
 
-const toneFor: Record<MessageStatus, 'gold' | 'info' | 'brand' | 'ok' | 'danger'> = {
+const toneFor: Record<MessageStatus, 'gold' | 'info' | 'brand' | 'ok' | 'danger' | 'neutral'> = {
   queued: 'gold',
   sending: 'info',
   sent: 'brand',
   delivered: 'ok',
   failed: 'danger',
+  canceled: 'neutral',
 }
 
 /** Single tick = sent, double tick = delivered — like the messengers people know. */
 function Ticks({ status }: { status: MessageStatus }) {
   if (status === 'queued' || status === 'sending')
     return <span className={cn('size-1.5 rounded-full bg-current', status === 'sending' && 'animate-pulse-soft')} />
-  if (status === 'failed')
+  if (status === 'failed' || status === 'canceled')
     return (
       <svg viewBox="0 0 12 12" className="size-3" fill="none" aria-hidden>
         <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />

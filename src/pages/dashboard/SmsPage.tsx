@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'motion/react'
-import { ChevronLeft, ChevronRight, PenLine, RefreshCw, Search, Smartphone } from 'lucide-react'
+import { Ban, ChevronLeft, ChevronRight, PenLine, RefreshCw, Search, Smartphone } from 'lucide-react'
 import { useLang, useT } from '@/shared/i18n'
 import { commonDict } from '@/shared/i18n/common'
 import { useAsync } from '@/shared/lib/useAsync'
@@ -11,7 +11,7 @@ import { cn } from '@/shared/lib/cn'
 import { ApiError } from '@/shared/api/client'
 import type { MessageStatus, SmsMessage } from '@/shared/api/types'
 import { Button, Card, EmptyState, Input, MessageStatusBadge, Modal, PageHeader, PriorityBadge, Skeleton, Tabs, useToast } from '@/shared/ui'
-import { fetchMessages, getContactName, getDeviceName, resendSms } from '@/features/sms/api/repository'
+import { cancelSms, fetchMessages, getContactName, getDeviceName, resendSms } from '@/features/sms/api/repository'
 
 const dict = {
   uz: {
@@ -37,6 +37,9 @@ const dict = {
     resend: 'Qayta yuborish',
     resentToast: 'SMS qayta navbatga qo‘shildi',
     resendFailed: 'Qayta yuborib bo‘lmadi',
+    cancel: 'Bekor qilish',
+    canceledToast: 'SMS bekor qilindi — yuborilmaydi',
+    cancelFailed: 'Bekor qilib bo‘lmadi',
     pageOf: (page: number, total: number) => `${page} / ${total}-sahifa`,
   },
   ru: {
@@ -62,6 +65,9 @@ const dict = {
     resend: 'Отправить снова',
     resentToast: 'SMS снова добавлено в очередь',
     resendFailed: 'Не удалось отправить снова',
+    cancel: 'Отменить',
+    canceledToast: 'SMS отменено — не будет отправлено',
+    cancelFailed: 'Не удалось отменить',
     pageOf: (page: number, total: number) => `Стр. ${page} из ${total}`,
   },
   en: {
@@ -87,6 +93,9 @@ const dict = {
     resend: 'Resend',
     resentToast: 'SMS re-queued',
     resendFailed: 'Could not resend',
+    cancel: 'Cancel',
+    canceledToast: 'SMS canceled — it won’t be sent',
+    cancelFailed: 'Could not cancel',
     pageOf: (page: number, total: number) => `Page ${page} of ${total}`,
   },
 }
@@ -114,6 +123,7 @@ export default function SmsPage() {
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<SmsMessage | null>(null)
   const [resending, setResending] = useState(false)
+  const [canceling, setCanceling] = useState(false)
   const debouncedSearch = useDebounced(search)
 
   const pageSize = 12
@@ -140,6 +150,20 @@ export default function SmsPage() {
       toast('error', err instanceof ApiError ? err.message : t.resendFailed)
     } finally {
       setResending(false)
+    }
+  }
+
+  const cancel = async (message: SmsMessage) => {
+    setCanceling(true)
+    try {
+      await cancelSms(message.id)
+      toast('success', t.canceledToast, formatPhone(message.to))
+      setSelected(null)
+      refetch()
+    } catch (err) {
+      toast('error', err instanceof ApiError ? err.message : t.cancelFailed)
+    } finally {
+      setCanceling(false)
     }
   }
 
@@ -309,10 +333,17 @@ export default function SmsPage() {
         closeLabel={c.close}
         footer={
           selected && (
-            <Button loading={resending} onClick={() => resend(selected)}>
-              <RefreshCw className="size-4" />
-              {t.resend}
-            </Button>
+            selected.status === 'queued' ? (
+              <Button variant="danger" loading={canceling} onClick={() => cancel(selected)}>
+                <Ban className="size-4" />
+                {t.cancel}
+              </Button>
+            ) : (
+              <Button loading={resending} onClick={() => resend(selected)}>
+                <RefreshCw className="size-4" />
+                {t.resend}
+              </Button>
+            )
           )
         }
       >

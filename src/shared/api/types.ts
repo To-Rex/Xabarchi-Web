@@ -30,7 +30,7 @@ export interface Device {
   isDefault: boolean
 }
 
-export type MessageStatus = 'queued' | 'sending' | 'sent' | 'delivered' | 'failed'
+export type MessageStatus = 'queued' | 'sending' | 'sent' | 'delivered' | 'failed' | 'canceled'
 
 /**
  * Queue class: urgent (OTP — jumps the queue, no send interval),
