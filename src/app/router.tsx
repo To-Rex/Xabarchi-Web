@@ -123,6 +123,7 @@ export const router = createBrowserRouter([
       { path: 'templates', element: <Boundary><TemplatesPage /></Boundary> },
       { path: 'analytics', element: <Boundary><AnalyticsPage /></Boundary> },
       { path: 'api', element: <Boundary><ApiPage /></Boundary> },
+      { path: 'api/docs', element: <Boundary><DocsPage /></Boundary> },
       { path: 'billing', element: <Boundary><BillingPage /></Boundary> },
       { path: 'settings', element: <Boundary><SettingsPage /></Boundary> },
       { path: 'profile', element: <Boundary><ProfilePage /></Boundary> },

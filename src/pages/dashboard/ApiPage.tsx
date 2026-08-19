@@ -181,7 +181,7 @@ export default function ApiPage() {
         title={t.title}
         subtitle={t.subtitle}
         actions={
-          <Link to="/docs">
+          <Link to="/app/api/docs">
             <Button variant="secondary">
               <BookOpen className="size-4" />
               {t.docs}
