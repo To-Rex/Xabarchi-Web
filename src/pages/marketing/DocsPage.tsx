@@ -14,12 +14,20 @@ const dict = {
     meta: { title: 'API hujjatlari — Xabarchi', desc: 'Xabarchi REST API: autentifikatsiya, SMS yuborish va shu yerda sinab ko‘rish.' },
     title: 'API hujjatlari',
     subtitle: 'Xabarchi REST API bilan istalgan tizimdan SMS yuboring. Bazaviy manzil: ',
-    nav: { intro: 'Kirish', auth: 'Autentifikatsiya', send: 'SMS yuborish', playground: 'Sinab ko‘rish', message: 'Xabar obyekti', errors: 'Xatoliklar', limits: 'Limitlar' },
+    nav: { intro: 'Kirish', auth: 'Autentifikatsiya', send: 'SMS yuborish', list: 'Xabarlarni olish', playground: 'Sinab ko‘rish', message: 'Xabar obyekti', errors: 'Xatoliklar', limits: 'Limitlar' },
     intro: 'Barcha so‘rovlar JSON qabul qiladi va JSON qaytaradi. Maydonlar camelCase’da. API kalitini boshqaruv panelining «API» bo‘limida yaratasiz — kalit faqat bir marta ko‘rsatiladi, uni xavfsiz saqlang.',
     getKey: 'API kalit olish',
     auth: 'Har bir so‘rovga X-API-Key sarlavhasida kalitni qo‘shing. Kalit xab_live_ bilan boshlanadi va sms.send ruxsatiga ega bo‘lishi kerak.',
     send: 'Bitta so‘rovda bir yoki bir nechta raqamga SMS yuboring. to — raqamlar massivi. Matn 160 belgidan (kirillcha 70) oshsa, avtomatik segmentlarga bo‘linadi va har biri alohida hisoblanadi.',
+    list: 'Yuborilgan yoki yuborilmagan xabarlarni oling. Yuborilmay qolganlarni topish uchun status bo‘yicha filtrlang: failed (yuborilmadi) yoki queued (navbatda kutmoqda). Javobdagi countsByStatus har bir holat bo‘yicha sonni beradi. Kalitga sms.read ruxsati kerak.',
     reqTitle: 'So‘rov tanasi',
+    queryTitle: 'Query parametrlari',
+    listFields: [
+      ['status', 'string?', 'Filtr: queued · sending · sent · delivered · failed · canceled.'],
+      ['search', 'string?', 'Raqam yoki matn bo‘yicha qidiruv.'],
+      ['page', 'number?', 'Sahifa (default: 1).'],
+      ['pageSize', 'number?', 'Sahifadagi soni (1–100, default: 20).'],
+    ],
     fields: [
       ['to', 'string[]', 'Qabul qiluvchi raqam(lar), xalqaro formatda. 1–500 ta.'],
       ['text', 'string', 'Xabar matni. 1–1000 belgi.'],
@@ -65,12 +73,20 @@ const dict = {
     meta: { title: 'API документация — Xabarchi', desc: 'Xabarchi REST API: аутентификация, отправка SMS и проверка прямо здесь.' },
     title: 'API документация',
     subtitle: 'Отправляйте SMS из любой системы через Xabarchi REST API. Базовый адрес: ',
-    nav: { intro: 'Введение', auth: 'Аутентификация', send: 'Отправка SMS', playground: 'Проверить', message: 'Объект сообщения', errors: 'Ошибки', limits: 'Лимиты' },
+    nav: { intro: 'Введение', auth: 'Аутентификация', send: 'Отправка SMS', list: 'Получить сообщения', playground: 'Проверить', message: 'Объект сообщения', errors: 'Ошибки', limits: 'Лимиты' },
     intro: 'Все запросы принимают и возвращают JSON. Поля — в camelCase. API-ключ создаётся в разделе «API» панели управления — он показывается один раз, храните его надёжно.',
     getKey: 'Получить API-ключ',
     auth: 'Добавляйте ключ в заголовок X-API-Key каждого запроса. Ключ начинается с xab_live_ и должен иметь право sms.send.',
     send: 'Отправьте SMS на один или несколько номеров за один запрос. to — массив номеров. Текст длиннее 160 символов (70 для кириллицы) автоматически делится на сегменты, каждый считается отдельно.',
+    list: 'Получайте отправленные и неотправленные сообщения. Чтобы найти неотправленные, фильтруйте по status: failed (не отправлено) или queued (в очереди). Поле countsByStatus в ответе даёт количество по каждому статусу. Ключу нужно право sms.read.',
     reqTitle: 'Тело запроса',
+    queryTitle: 'Query-параметры',
+    listFields: [
+      ['status', 'string?', 'Фильтр: queued · sending · sent · delivered · failed · canceled.'],
+      ['search', 'string?', 'Поиск по номеру или тексту.'],
+      ['page', 'number?', 'Страница (по умолчанию: 1).'],
+      ['pageSize', 'number?', 'Кол-во на странице (1–100, по умолчанию: 20).'],
+    ],
     fields: [
       ['to', 'string[]', 'Номер(а) получателей в международном формате. 1–500 шт.'],
       ['text', 'string', 'Текст сообщения. 1–1000 символов.'],
@@ -116,12 +132,20 @@ const dict = {
     meta: { title: 'API docs — Xabarchi', desc: 'Xabarchi REST API: authentication, sending SMS, and try it right here.' },
     title: 'API documentation',
     subtitle: 'Send SMS from any system with the Xabarchi REST API. Base URL: ',
-    nav: { intro: 'Introduction', auth: 'Authentication', send: 'Send an SMS', playground: 'Try it', message: 'Message object', errors: 'Errors', limits: 'Limits' },
+    nav: { intro: 'Introduction', auth: 'Authentication', send: 'Send an SMS', list: 'Fetch messages', playground: 'Try it', message: 'Message object', errors: 'Errors', limits: 'Limits' },
     intro: 'All endpoints accept and return JSON. Fields are camelCase. Create an API key in the dashboard’s “API” section — it is shown only once, so store it safely.',
     getKey: 'Get an API key',
     auth: 'Pass your key in the X-API-Key header of every request. Keys start with xab_live_ and must carry the sms.send scope.',
     send: 'Send an SMS to one or more numbers in a single request. to is an array of numbers. Text longer than 160 characters (70 for Cyrillic) is split into segments automatically, each billed separately.',
+    list: 'Fetch sent and unsent messages. To find what wasn’t sent, filter by status: failed (couldn’t send) or queued (still waiting). The response’s countsByStatus gives per-status totals. The key needs the sms.read scope.',
     reqTitle: 'Request body',
+    queryTitle: 'Query parameters',
+    listFields: [
+      ['status', 'string?', 'Filter: queued · sending · sent · delivered · failed · canceled.'],
+      ['search', 'string?', 'Search by number or text.'],
+      ['page', 'number?', 'Page (default: 1).'],
+      ['pageSize', 'number?', 'Items per page (1–100, default: 20).'],
+    ],
     fields: [
       ['to', 'string[]', 'Recipient number(s) in international format. 1–500.'],
       ['text', 'string', 'Message text. 1–1000 characters.'],
@@ -542,6 +566,37 @@ export default function DocsPage() {
               ))}
             </div>
             <CodeBlock title={snippets[codeLang].title} code={snippets[codeLang].code} />
+          </Section>
+
+          <Section id="list" title={t.nav.list}>
+            <Endpoint method="GET" path="/public/messages?status=failed" />
+            <p className="text-sm leading-relaxed text-ink-2">{t.list}</p>
+            <p className="pt-1 text-[13px] font-semibold text-ink">{t.queryTitle}</p>
+            <FieldTable rows={t.listFields} />
+            <CodeBlock
+              title="curl"
+              code={`curl "${API_BASE}/public/messages?status=failed&pageSize=20" \\
+  -H "X-API-Key: xab_live_..."`}
+            />
+            <CodeBlock
+              title="200 OK"
+              code={`{
+  "items": [
+    {
+      "id": 418,
+      "to": "+998901234567",
+      "text": "Tasdiqlash kodingiz: 48213",
+      "status": "failed",
+      "priority": "urgent",
+      "segments": 1,
+      "createdAt": "2026-08-19T09:41:03Z",
+      "failReason": "no_sim"
+    }
+  ],
+  "total": 3,
+  "countsByStatus": { "all": 42, "failed": 3, "queued": 5, "sent": 8, "delivered": 26 }
+}`}
+            />
           </Section>
 
           <Section id="playground" title={t.nav.playground}>
