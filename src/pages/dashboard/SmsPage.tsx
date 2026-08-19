@@ -20,7 +20,7 @@ const dict = {
     subtitle: 'Yuborilgan barcha xabarlar tarixi va holati.',
     newSms: 'Yangi SMS',
     searchPlaceholder: 'Raqam, matn yoki ism bo‘yicha qidirish',
-    tabs: { all: 'Barchasi', delivered: 'Yetkazildi', sent: 'Yuborildi', queued: 'Navbatda', failed: 'Xato' },
+    tabs: { all: 'Barchasi', scheduled: 'Rejalangan', delivered: 'Yetkazildi', sent: 'Yuborildi', queued: 'Navbatda', failed: 'Xato' },
     cols: { recipient: 'Qabul qiluvchi', text: 'Matn', device: 'Qurilma', time: 'Vaqt', status: 'Holat' },
     empty: 'Hali xabar yo‘q',
     emptyBody: 'Birinchi SMSingizni yuboring — tarix shu yerda ko‘rinadi.',
@@ -30,6 +30,7 @@ const dict = {
       device: 'Qurilma',
       segments: 'Segmentlar',
       created: 'Yaratildi',
+      scheduledFor: 'Rejalangan vaqt',
       delivered: 'Yetkazildi',
       failReason: 'Sabab',
       reasons: { no_signal: 'Signal yo‘q', invalid_number: 'Raqam noto‘g‘ri', device_offline: 'Qurilma oflayn' },
@@ -55,7 +56,7 @@ const dict = {
     subtitle: 'История и статус всех отправленных сообщений.',
     newSms: 'Новое SMS',
     searchPlaceholder: 'Поиск по номеру, тексту или имени',
-    tabs: { all: 'Все', delivered: 'Доставлено', sent: 'Отправлено', queued: 'В очереди', failed: 'Ошибка' },
+    tabs: { all: 'Все', scheduled: 'Запланир.', delivered: 'Доставлено', sent: 'Отправлено', queued: 'В очереди', failed: 'Ошибка' },
     cols: { recipient: 'Получатель', text: 'Текст', device: 'Устройство', time: 'Время', status: 'Статус' },
     empty: 'Сообщений пока нет',
     emptyBody: 'Отправьте первое SMS — история появится здесь.',
@@ -65,6 +66,7 @@ const dict = {
       device: 'Устройство',
       segments: 'Сегменты',
       created: 'Создано',
+      scheduledFor: 'Запланировано на',
       delivered: 'Доставлено',
       failReason: 'Причина',
       reasons: { no_signal: 'Нет сигнала', invalid_number: 'Неверный номер', device_offline: 'Устройство офлайн' },
@@ -90,7 +92,7 @@ const dict = {
     subtitle: 'History and status of everything you have sent.',
     newSms: 'New SMS',
     searchPlaceholder: 'Search by number, text or name',
-    tabs: { all: 'All', delivered: 'Delivered', sent: 'Sent', queued: 'Queued', failed: 'Failed' },
+    tabs: { all: 'All', scheduled: 'Scheduled', delivered: 'Delivered', sent: 'Sent', queued: 'Queued', failed: 'Failed' },
     cols: { recipient: 'Recipient', text: 'Text', device: 'Device', time: 'Time', status: 'Status' },
     empty: 'No messages yet',
     emptyBody: 'Send your first SMS — the history will appear here.',
@@ -100,6 +102,7 @@ const dict = {
       device: 'Device',
       segments: 'Segments',
       created: 'Created',
+      scheduledFor: 'Scheduled for',
       delivered: 'Delivered',
       failReason: 'Reason',
       reasons: { no_signal: 'No signal', invalid_number: 'Invalid number', device_offline: 'Device offline' },
@@ -121,7 +124,7 @@ const dict = {
   },
 }
 
-type StatusTab = 'all' | Extract<MessageStatus, 'delivered' | 'sent' | 'queued' | 'failed'>
+type StatusTab = 'all' | Extract<MessageStatus, 'scheduled' | 'delivered' | 'sent' | 'queued' | 'failed'>
 
 function useDebounced<T>(value: T, ms = 300): T {
   const [debounced, setDebounced] = useState(value)
@@ -244,6 +247,7 @@ export default function SmsPage() {
   const tabs = useMemo(
     () => [
       { value: 'all' as const, label: t.tabs.all, count: counts?.all },
+      { value: 'scheduled' as const, label: t.tabs.scheduled, count: counts?.scheduled },
       { value: 'delivered' as const, label: t.tabs.delivered, count: counts?.delivered },
       { value: 'sent' as const, label: t.tabs.sent, count: counts?.sent },
       { value: 'queued' as const, label: t.tabs.queued, count: counts?.queued },
@@ -436,7 +440,7 @@ export default function SmsPage() {
         closeLabel={c.close}
         footer={
           selected && (
-            selected.status === 'queued' ? (
+            selected.status === 'queued' || selected.status === 'scheduled' ? (
               <Button variant="danger" loading={canceling} onClick={() => cancel(selected)}>
                 <Ban className="size-4" />
                 {t.cancel}
@@ -472,6 +476,12 @@ export default function SmsPage() {
                 <dt className="text-xs font-medium uppercase tracking-wide text-ink-3">{t.detail.created}</dt>
                 <dd className="tnum mt-1 text-ink">{formatDateTime(selected.createdAt, lang)}</dd>
               </div>
+              {selected.scheduledAt && (
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-brand">{t.detail.scheduledFor}</dt>
+                  <dd className="tnum mt-1 font-semibold text-brand">{formatDateTime(selected.scheduledAt, lang)}</dd>
+                </div>
+              )}
               <div>
                 <dt className="text-xs font-medium uppercase tracking-wide text-ink-3">
                   {selected.status === 'failed' ? t.detail.failReason : t.detail.delivered}

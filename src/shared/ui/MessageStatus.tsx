@@ -4,12 +4,13 @@ import { cn } from '@/shared/lib/cn'
 import { Badge } from './Badge'
 
 const dict = {
-  uz: { queued: 'Navbatda', sending: 'Yuborilmoqda', sent: 'Yuborildi', delivered: 'Yetkazildi', failed: 'Xato', canceled: 'Bekor qilindi' },
-  ru: { queued: 'В очереди', sending: 'Отправляется', sent: 'Отправлено', delivered: 'Доставлено', failed: 'Ошибка', canceled: 'Отменено' },
-  en: { queued: 'Queued', sending: 'Sending', sent: 'Sent', delivered: 'Delivered', failed: 'Failed', canceled: 'Canceled' },
+  uz: { scheduled: 'Rejalangan', queued: 'Navbatda', sending: 'Yuborilmoqda', sent: 'Yuborildi', delivered: 'Yetkazildi', failed: 'Xato', canceled: 'Bekor qilindi' },
+  ru: { scheduled: 'Запланировано', queued: 'В очереди', sending: 'Отправляется', sent: 'Отправлено', delivered: 'Доставлено', failed: 'Ошибка', canceled: 'Отменено' },
+  en: { scheduled: 'Scheduled', queued: 'Queued', sending: 'Sending', sent: 'Sent', delivered: 'Delivered', failed: 'Failed', canceled: 'Canceled' },
 }
 
 const toneFor: Record<MessageStatus, 'gold' | 'info' | 'brand' | 'ok' | 'danger' | 'neutral'> = {
+  scheduled: 'info',
   queued: 'gold',
   sending: 'info',
   sent: 'brand',
@@ -20,6 +21,13 @@ const toneFor: Record<MessageStatus, 'gold' | 'info' | 'brand' | 'ok' | 'danger'
 
 /** Single tick = sent, double tick = delivered — like the messengers people know. */
 function Ticks({ status }: { status: MessageStatus }) {
+  if (status === 'scheduled')
+    return (
+      <svg viewBox="0 0 12 12" className="size-3" fill="none" aria-hidden>
+        <circle cx="6" cy="6" r="4.6" stroke="currentColor" strokeWidth="1.4" />
+        <path d="M6 3.6V6l1.6 1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
   if (status === 'queued' || status === 'sending')
     return <span className={cn('size-1.5 rounded-full bg-current', status === 'sending' && 'animate-pulse-soft')} />
   if (status === 'failed' || status === 'canceled')

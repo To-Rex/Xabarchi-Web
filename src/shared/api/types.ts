@@ -30,7 +30,7 @@ export interface Device {
   isDefault: boolean
 }
 
-export type MessageStatus = 'queued' | 'sending' | 'sent' | 'delivered' | 'failed' | 'canceled'
+export type MessageStatus = 'scheduled' | 'queued' | 'sending' | 'sent' | 'delivered' | 'failed' | 'canceled'
 
 /**
  * Queue class: urgent (OTP — jumps the queue, no send interval),
@@ -48,6 +48,7 @@ export interface SmsMessage {
   deviceId?: string | null
   segments: number
   createdAt: string
+  scheduledAt?: string | null
   sentAt?: string | null
   deliveredAt?: string | null
   failReason?: 'no_signal' | 'invalid_number' | 'device_offline' | null

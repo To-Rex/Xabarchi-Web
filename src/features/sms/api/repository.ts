@@ -51,6 +51,8 @@ export interface SendPayload {
   text: string
   deviceId?: string
   priority: SmsPriority
+  /** ISO datetime to send at (future). Omit to send now. */
+  scheduledAt?: string
 }
 
 export function sendSms(payload: SendPayload): Promise<SmsMessage[]> {
@@ -61,6 +63,7 @@ export function sendSms(payload: SendPayload): Promise<SmsMessage[]> {
       text: payload.text,
       deviceId: payload.deviceId || undefined,
       priority: payload.priority,
+      scheduledAt: payload.scheduledAt || undefined,
     },
   })
 }

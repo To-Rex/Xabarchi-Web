@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowLeft, CheckCircle2, Plus, Search, Send, Users, X } from 'lucide-react'
+import { ArrowLeft, CalendarClock, CheckCircle2, Plus, Search, Send, Users, X } from 'lucide-react'
 import { useLang, useT } from '@/shared/i18n'
 import { commonDict } from '@/shared/i18n/common'
 import { usePageMeta } from '@/shared/lib/usePageMeta'
@@ -10,7 +10,7 @@ import { formatNumber, formatPhone, smsSegments } from '@/shared/lib/format'
 import { cn } from '@/shared/lib/cn'
 import { ApiError } from '@/shared/api/client'
 import type { SmsPriority } from '@/shared/api/types'
-import { Badge, Button, Input, Modal, SegmentedControl, Select, Textarea, useToast } from '@/shared/ui'
+import { Badge, Button, Input, Modal, SegmentedControl, Select, Switch, Textarea, useToast } from '@/shared/ui'
 import { sendSms } from '@/features/sms/api/repository'
 import { fetchDevices } from '@/features/devices/api/repository'
 import { fetchTemplates } from '@/features/templates/api/repository'
@@ -43,6 +43,7 @@ const dict = {
       bulk: 'Aksiya va ommaviy yuborish — sekin qator, kunlik limitga bo‘ysunadi.',
     },
     submit: 'Yuborish',
+    schedule: { toggle: 'Rejali yuborish', hint: 'Belgilangan vaqtda avtomatik yuboriladi', at: 'Yuborish vaqti', past: 'Kelajakdagi vaqtni tanlang', hour: '+1 soat', day: '+1 kun', week: '+1 hafta', month: '+1 oy', submit: 'Rejalash', toast: 'SMS rejalandi' },
     preview: 'Ko‘rinish',
     chars: 'belgi',
     segments: 'segment',
@@ -77,6 +78,7 @@ const dict = {
       bulk: 'Акции и массовые рассылки — медленная полоса, в рамках дневного лимита.',
     },
     submit: 'Отправить',
+    schedule: { toggle: 'Запланировать', hint: 'Отправится автоматически в назначенное время', at: 'Время отправки', past: 'Выберите будущее время', hour: '+1 час', day: '+1 день', week: '+1 неделя', month: '+1 месяц', submit: 'Запланировать', toast: 'SMS запланировано' },
     preview: 'Превью',
     chars: 'символов',
     segments: 'сегм.',
@@ -111,6 +113,7 @@ const dict = {
       bulk: 'Campaigns and mass sends — the slow lane, within the daily limit.',
     },
     submit: 'Send',
+    schedule: { toggle: 'Schedule', hint: 'Sent automatically at the chosen time', at: 'Send time', past: 'Pick a future time', hour: '+1 hour', day: '+1 day', week: '+1 week', month: '+1 month', submit: 'Schedule', toast: 'SMS scheduled' },
     preview: 'Preview',
     chars: 'chars',
     segments: 'segments',
@@ -132,6 +135,12 @@ function normalizePhone(raw: string): string | null {
   if (digits.length === 9) digits = `998${digits}`
   if (digits.length === 12 && digits.startsWith('998')) return digits
   return null
+}
+
+/** Format a timestamp as a local "YYYY-MM-DDTHH:mm" for <input type="datetime-local">. */
+function toLocalInput(ms: number): string {
+  const d = new Date(ms)
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
 }
 
 export default function ComposePage() {
@@ -157,6 +166,9 @@ export default function ComposePage() {
   const [textError, setTextError] = useState<string>()
   const [deviceId, setDeviceId] = useState('')
   const [priority, setPriority] = useState<SmsPriority>('transactional')
+  const [scheduleOn, setScheduleOn] = useState(false)
+  const [scheduledAt, setScheduledAt] = useState('')
+  const [scheduleError, setScheduleError] = useState<string>()
 
   // Once reference data lands: pick the default device and apply the
   // template that a "Use" click on the templates page carried over.
@@ -243,13 +255,24 @@ export default function ComposePage() {
       setTextError(t.errors.text)
       hasError = true
     }
+    let scheduledIso: string | undefined
+    if (scheduleOn) {
+      const when = scheduledAt ? new Date(scheduledAt) : null
+      if (!when || Number.isNaN(when.getTime()) || when.getTime() <= Date.now()) {
+        setScheduleError(t.schedule.past)
+        hasError = true
+      } else {
+        scheduledIso = when.toISOString()
+      }
+    }
     if (hasError) return
 
     setSending(true)
     try {
-      const created = await sendSms({ to: recipients, text, deviceId: deviceId || undefined, priority })
+      const created = await sendSms({ to: recipients, text, deviceId: deviceId || undefined, priority, scheduledAt: scheduledIso })
       setDone(true)
-      toast('success', t.sentToast, t.sentToastBody(created.length))
+      if (scheduledIso) toast('success', t.schedule.toast)
+      else toast('success', t.sentToast, t.sentToastBody(created.length))
     } catch (error) {
       toast('error', error instanceof ApiError ? error.message : c.errorTitle)
     } finally {
@@ -396,9 +419,46 @@ export default function ComposePage() {
             ))}
           </Select>
 
+          {/* Schedule */}
+          <div className="mt-5 rounded-xl border border-line p-3.5">
+            <label className="flex items-center justify-between">
+              <span className="flex items-center gap-2 text-[14px] font-medium text-ink">
+                <CalendarClock className="size-4 text-brand" />
+                {t.schedule.toggle}
+              </span>
+              <Switch checked={scheduleOn} onChange={(v) => { setScheduleOn(v); setScheduleError(undefined) }} />
+            </label>
+            {scheduleOn && (
+              <div className="mt-3">
+                <p className="mb-1.5 text-[13px] font-medium text-ink-2">{t.schedule.at}</p>
+                <input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  min={toLocalInput(Date.now() + 60_000)}
+                  onChange={(e) => { setScheduledAt(e.target.value); setScheduleError(undefined) }}
+                  className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-brand focus:outline-none"
+                />
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {([['hour', 36e5], ['day', 864e5], ['week', 6048e5], ['month', 2592e6]] as const).map(([key, ms]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => { setScheduledAt(toLocalInput(Date.now() + ms)); setScheduleError(undefined) }}
+                      className="rounded-lg bg-sunken px-2.5 py-1 text-[12px] font-medium text-ink-2 transition-colors hover:text-ink"
+                    >
+                      {t.schedule[key]}
+                    </button>
+                  ))}
+                </div>
+                {scheduleError && <p className="mt-2 text-[13px] text-danger">{scheduleError}</p>}
+                <p className="mt-2 text-[12px] text-ink-3">{t.schedule.hint}</p>
+              </div>
+            )}
+          </div>
+
           <Button size="lg" className="mt-7 w-full sm:w-auto" loading={sending} onClick={submit}>
-            <Send className="size-4" />
-            {t.submit}
+            {scheduleOn ? <CalendarClock className="size-4" /> : <Send className="size-4" />}
+            {scheduleOn ? t.schedule.submit : t.submit}
             {totalSms > 0 && <span className="tnum rounded-md bg-black/10 px-1.5 py-0.5 text-xs">{formatNumber(totalSms, lang)}</span>}
           </Button>
         </motion.div>
