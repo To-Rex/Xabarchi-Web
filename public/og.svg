@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B3B37"/>
+      <stop offset="0.55" stop-color="#0E7A72"/>
+      <stop offset="1" stop-color="#0E9488"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.82" cy="0.2" r="0.7">
+      <stop offset="0" stop-color="#5EEAD4" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#5EEAD4" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <g transform="translate(96 150)">
+    <rect width="132" height="132" rx="32" fill="#fff"/>
+    <path d="M33 48C33 40.3 39.3 34 47 34h38c7.7 0 14 6.3 14 14v20c0 7.7-6.3 14-14 14H57l-16.8 13.4C37.6 97.9 33 96 33 92.7V48z" fill="#0E9488"/>
+    <path d="M51 58l8 8 18-17.6" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+  <text x="256" y="248" font-family="Segoe UI, Arial, sans-serif" font-size="80" font-weight="800" fill="#ffffff" letter-spacing="-2">Xabarchi</text>
+  <text x="98" y="368" font-family="Segoe UI, Arial, sans-serif" font-size="54" font-weight="700" fill="#ffffff">SMS platformasi</text>
+  <text x="98" y="440" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="400" fill="#D7F5F0">O'z Android telefoningiz va SIM-kartangiz orqali</text>
+  <text x="98" y="486" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="400" fill="#D7F5F0">SMS yuboring — aggregatorlarsiz.</text>
+  <g transform="translate(98 540)" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="600" fill="#0B3B37">
+    <rect width="150" height="52" rx="26" fill="#5EEAD4"/>
+    <text x="30" y="34">Bepul boshlash</text>
+    <text x="185" y="34" fill="#D7F5F0" font-weight="400">xabarchi.uz</text>
+  </g>
+</svg>

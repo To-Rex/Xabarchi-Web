@@ -25,9 +25,23 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue | null>(null)
 
+function isLang(v: string | null): v is Lang {
+  return v === 'uz' || v === 'ru' || v === 'en'
+}
+
 function readStoredLang(): Lang {
+  // A ?lang= URL param wins on first load — lets search engines index the
+  // ru/en variants (listed in sitemap.xml) and makes shared links open in
+  // the right language. The choice is then persisted like a manual switch.
+  try {
+    const fromUrl = new URLSearchParams(window.location.search).get('lang')
+    if (isLang(fromUrl)) {
+      storageSet(STORAGE_KEY, fromUrl)
+      return fromUrl
+    }
+  } catch { /* SSR / no window — fall through */ }
   const raw = storageGet(STORAGE_KEY)
-  return raw === 'uz' || raw === 'ru' || raw === 'en' ? raw : 'uz'
+  return isLang(raw) ? raw : 'uz'
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {

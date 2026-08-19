@@ -1,0 +1,14 @@
+{
+  "name": "Xabarchi — SMS platformasi",
+  "short_name": "Xabarchi",
+  "description": "O'z Android telefoningiz orqali SMS yuboring. Aggregatorlarsiz, o'z SIM-kartangiz bilan.",
+  "lang": "uz",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0E9488",
+  "icons": [
+    { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" }
+  ]
+}
